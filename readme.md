@@ -1,0 +1,1 @@
+Lightweight desktop app for tracking, visualizing and logging CPU/GPU temps for windows

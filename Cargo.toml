@@ -1,0 +1,13 @@
+[package]
+name = "temp-monitor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.33.0"
+egui_extras = { version = "*", features = ["all_loaders"] }
+image = { version = "0.25", features = ["jpeg", "png"] }
+sysinfo = "0.37.2"
+csv = "1.4.0"
+wmi = "0.17.3"
+env_logger = "0.11.8"
