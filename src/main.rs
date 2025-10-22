@@ -3,8 +3,13 @@
 mod app;
 mod collectors;
 
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 use app::ui_main_window::MainWindow;
 use eframe::egui::{self, Context, Visuals};
+use crate::collectors::cpu_collector::CpuData;
+use sysinfo::System;
 
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -25,7 +30,23 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| {
             set_styles(&cc.egui_ctx);
-            Ok(Box::new(MainWindow::new()))
+            // THREAD TO UPDATE CPU DATA
+            let (tx, rx) = mpsc::channel();
+            let mut sys = System::new_all();
+            let ctx = cc.egui_ctx.clone();
+
+            thread::spawn(move || {
+                loop {
+                    sys.refresh_cpu_all();
+                    if tx.send(CpuData::new(&sys)).is_err() {
+                        break; // Receiver dropped, exit thread
+                    }
+                    ctx.request_repaint();
+                    thread::sleep(Duration::from_secs(1));
+                }
+            });
+
+            Ok(Box::new(MainWindow::new(rx)))
         }),
     )
 }

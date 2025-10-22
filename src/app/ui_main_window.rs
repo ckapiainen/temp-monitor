@@ -1,21 +1,19 @@
-use eframe::egui::{self, CentralPanel, Context, TopBottomPanel};
-use sysinfo::System;
+use std::sync::mpsc::Receiver;
+use std::time::Duration;
 use crate::collectors::cpu_collector::CpuData;
-
+use eframe::egui::{self, CentralPanel, Context, RichText, TopBottomPanel};
+use sysinfo::System;
 pub struct MainWindow {
-    system: System,
+    rx: Receiver<CpuData>,
     cpu_data: CpuData,
     scale: f32,
 }
 
 impl MainWindow {
-    pub fn new() -> Self {
-        let mut system = System::new_all();
-        let cpu_data = CpuData::new(&system);
-
+    pub fn new(rx: Receiver<CpuData>) -> Self {
         Self {
-            system,
-            cpu_data,
+            rx,
+            cpu_data: CpuData::default(),
             scale: 1.1,
         }
     }
@@ -23,9 +21,9 @@ impl MainWindow {
 
 impl eframe::App for MainWindow {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        // Refresh system data if needed
-        self.system.refresh_cpu_all();
-        self.cpu_data.update(&self.system);
+        if let Ok(new_data) = self.rx.try_recv() {
+            self.cpu_data = new_data;
+        }
 
         ctx.set_pixels_per_point(self.scale);
         TopBottomPanel::top("menu_bar").show(ctx, |ui| {
@@ -40,12 +38,20 @@ impl eframe::App for MainWindow {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.horizontal(|ui| {
                         let mut theme = ui.ctx().options(|o| o.theme_preference);
-
-                        if ui.selectable_label(theme == egui::ThemePreference::Light, "☀ Light").clicked() {
-                            ui.ctx().options_mut(|o| o.theme_preference = egui::ThemePreference::Light);
+                        if theme == egui::ThemePreference::System {
+                            if ui.ctx().style().visuals.dark_mode {
+                                theme = egui::ThemePreference::Dark;
+                            } else {
+                                theme = egui::ThemePreference::Light;
+                            }
                         }
-                        if ui.selectable_label(theme == egui::ThemePreference::Dark, "🌙 Dark").clicked() {
-                            ui.ctx().options_mut(|o| o.theme_preference = egui::ThemePreference::Dark);
+                        let original_theme = theme;
+
+                        ui.selectable_value(&mut theme, egui::ThemePreference::Light, "☀ Light");
+                        ui.selectable_value(&mut theme, egui::ThemePreference::Dark, "🌙 Dark");
+
+                        if theme != original_theme {
+                            ui.ctx().options_mut(|o| o.theme_preference = theme);
                         }
                     });
                 });
@@ -53,9 +59,17 @@ impl eframe::App for MainWindow {
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            ui.heading(egui::RichText::new(self.cpu_data.get_name()).strong().size(20.0));
-            ui.label(format!("Logical Cores: {}", self.cpu_data.get_count()));
-
+            ui.heading(RichText::new(self.cpu_data.get_name()).strong().size(15.0));
+            ui.separator();
+            ui.label(RichText::new(format!(
+                "Logical Cores: {}  @{:.2}hz",
+                self.cpu_data.get_count(),
+                self.cpu_data.get_base_frequency()
+            )));
+            ui.label(RichText::new(format!(
+                "CPU Usage: {:.2}%",
+                self.cpu_data.get_cpu_usage()
+            )));
         });
     }
 }
