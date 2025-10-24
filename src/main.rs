@@ -1,128 +1,89 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-mod app;
-mod collectors;
+use iced::widget::{button, column, container, pick_list, text};
+use iced::{window, Center, Element, Task, Theme};
 
-use std::process::exit;
-use std::sync::{mpsc, Mutex};
-use std::thread;
-use std::time::Duration;
-use app::ui_main_window::MainWindow;
-use eframe::egui::{self, Context, Visuals};
-use crate::collectors::cpu_collector::CpuData;
-use sysinfo::System;
-use tray_icon::{menu::{Menu, MenuItem, MenuEvent}, Icon, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use windows::Win32::Foundation::HWND;
-use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE, SW_SHOWDEFAULT};
-use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
-static VISIBLE: Mutex<bool> = Mutex::new(true);
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-
-    // ----TRAY ICON CRAP -----
-    let quit_i = MenuItem::with_id( "quit", "Quit", true, None);
-    let icon = Icon::from_path("assets/favicon.ico", None)?;
-    let tray_menu = Menu::new();
-    tray_menu.append_items(&[&quit_i])?;
-    let _tray_icon = TrayIconBuilder::new()
-        .with_menu(Box::new(tray_menu))
-        .with_icon(icon)
-        .with_tooltip("TempMon")
-        .build()?;
-    // ^^^^^ TRAY ICON CRAP ^^^^
-
-    // ----NATIVE WINDOW SETUP -----
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([520.0, 340.0])
-            .with_min_inner_size([300.0, 240.0])
-            .with_icon(
-                eframe::icon_data::from_png_bytes(&include_bytes!("../assets/img.png")[..])
-                    .expect("Failed to load icon"),
-            ),
-        // .with_decorations(false) // Disable window decorations
-        // .with_transparent(true), // Enable transparency
-        ..Default::default()
-    };
-    eframe::run_native(
-        "TempMon",
-        options,
-        Box::new(|cc| {
-            let ctx = cc.egui_ctx.clone();
-            set_styles(&cc.egui_ctx);
-
-            // TRAY ICON https://github.com/emilk/egui/discussions/737
-            let RawWindowHandle::Win32(handle) = cc.window_handle().unwrap().as_raw() else {
-                panic!("Unsupported platform");
-            };
-            MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
-                if event.id == "quit" {
-                    exit(0);
-                }
-            }));
-            TrayIconEvent::set_event_handler(Some(move |event: TrayIconEvent| {
-
-                match event {
-                    TrayIconEvent::Click {
-                        button_state: MouseButtonState::Down,
-                        ..
-                    } => {
-                        let mut visible = VISIBLE.lock().unwrap();
-
-                        if *visible {
-                            let window_handle = HWND(handle.hwnd.into());
-                            unsafe {
-                                ShowWindow(window_handle, SW_HIDE);
-                            }
-                            *visible = false;
-                        } else {
-                            let window_handle = HWND(handle.hwnd.into());
-                            unsafe {
-                                ShowWindow(window_handle, SW_SHOWDEFAULT);
-                            }
-                            *visible = true;
-                        }
-
-                    }
-                    _ => (),
-                }
-            }));
-
-            // THREAD TO UPDATE CPU DATA
-            let (tx, rx) = mpsc::channel();
-            let mut sys = System::new_all();
-            thread::spawn(move || {
-                loop {
-                    sys.refresh_cpu_all();
-                    if tx.send(CpuData::new(&sys)).is_err() {
-                        break; // Receiver dropped, exit thread
-                    }
-                    ctx.request_repaint();
-                    thread::sleep(Duration::from_secs(1));
-                }
-            });
-
-            Ok(Box::new(MainWindow::new(rx)))
-        }),
-    )?;
-
-    Ok(())
+fn main() -> iced::Result {
+    iced::daemon(App::new, App::update, App::view)
+        .subscription(App::subscription)
+        .title("TempMon")
+        .theme(App::theme)
+        .run()
 }
 
-fn set_styles(ctx: &Context) {
-    let mut style = (*ctx.style()).clone();
-    style.visuals = Visuals::dark();
-    style.visuals.window_fill = egui::Color32::from_rgb(20, 20, 30);
+struct App {
+    window_id: Option<window::Id>,
+    current_theme: Theme,  // Store selected theme
+}
 
-    // Modify the font for buttons ---MAYBE DELETE LATER---
-    // if let Some(text_style) = style.text_styles.get_mut(&egui::TextStyle::Button) {
-    //     text_style.size = 14.0;
-    //     text_style.family = egui::FontFamily::Monospace;
-    // }
-    //
-    // // Modify the font for headings
-    // if let Some(text_style) = style.text_styles.get_mut(&egui::TextStyle::Heading) {
-    //     text_style.size = 34.0;
-    // }
+#[derive(Clone, Debug)]
+enum Message {
+    WindowOpened(window::Id),
+    WindowClosed(window::Id),
+    ThemeChanged(Theme),  // New message
+}
 
-    ctx.set_style(style);
+impl App {
+    fn new() -> (Self, Task<Message>) {
+        let (_, open_task) = window::open(window::Settings::default());
+
+        (
+            Self {
+                window_id: None,
+                current_theme: Theme::GruvboxDark,
+            },
+            open_task.map(Message::WindowOpened),
+        )
+    }
+
+    fn theme(&self, _window: window::Id) -> Theme {
+        self.current_theme.clone()
+    }
+
+    fn update(&mut self, message: Message) -> Task<Message> {
+        match message {
+            Message::WindowOpened(id) => {
+                self.window_id = Some(id);
+                Task::none()
+            }
+            Message::WindowClosed(_) => {
+                println!("Window closed, daemon still running..."); // debug reminder...
+                Task::none()
+            }
+            Message::ThemeChanged(theme) => {
+                self.current_theme = theme;  // Update theme
+                Task::none()
+            }
+        }
+    }
+
+    fn view(&self, window_id: window::Id) -> Element<Message> {
+        if self.window_id != Some(window_id) {
+            return container("").into();
+        }
+
+        // Theme picker dropdown
+        let theme_picker = pick_list(
+            Theme::ALL,
+            Some(&self.current_theme),
+            Message::ThemeChanged,
+        )
+            .placeholder("Choose theme");
+
+        let content = column![
+            text("Pick a Theme:").size(20),
+            theme_picker,
+            text(""),
+        ]
+            .spacing(20)
+            .align_x(Center);
+
+        container(content)
+            .padding(40)
+            .center_x(iced::Fill)
+            .center_y(iced::Fill)
+            .into()
+    }
+
+    fn subscription(&self) -> iced::Subscription<Message> {
+        window::close_events().map(Message::WindowClosed)
+    }
 }
