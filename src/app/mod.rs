@@ -1,1 +1,1 @@
-pub mod ui_main_window;
+pub mod main_window;
