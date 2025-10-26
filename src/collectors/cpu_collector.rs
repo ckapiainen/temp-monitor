@@ -11,7 +11,7 @@ pub struct CpuData {
 impl CpuData {
     pub fn new(sys: &System) -> Self {
         Self {
-            cpu_name: sys.cpus()[0].brand().trim().to_string(),
+            cpu_name: sys.cpus()[0].brand().trim().replace("Processor","").to_string(),
             cpu_count: sys.cpus().len() as u32,
             base_cpu_frequency: sys.cpus()[0].frequency() as f64 / 1000.0,
             cpu_usage:  sys.global_cpu_usage(),

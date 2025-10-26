@@ -1,13 +1,15 @@
 mod app;
 mod collectors;
 
-use iced::widget::{button, center, column, container, pick_list, row, text};
-use iced::window::Position::Centered;
-use iced::{window, Background, Center, Element, Fill, Task, Theme};
-use app::{layout ,main_window};
+use std::time::Duration;
+use iced::widget::container;
+use iced::{window, Element, Subscription, Task, Theme};
+use sysinfo::System;
+use app::{layout, main_window};
+use crate::collectors::cpu_collector::CpuData;
 
 fn main() -> iced::Result {
-    iced::daemon(App::new, App::update, App::view)
+    iced::daemon(|| App::new(), App::update, App::view)
         .subscription(App::subscription)
         .title("TempMon")
         .theme(App::theme)
@@ -22,6 +24,7 @@ enum Message {
     MainButtonPressed,
     PlotterButtonPressed,
     SettingsButtonPressed,
+    UpdateTemperatures,
 }
 #[derive(Clone, Debug)]
 enum Screen {
@@ -32,6 +35,8 @@ enum Screen {
 
 struct App {
     window_id: Option<window::Id>,
+    cpu_data: CpuData,
+    system: System,
     current_screen: Screen,
     app_screen: Screen,
     current_theme: Theme,
@@ -50,9 +55,14 @@ impl App {
 
         let (_, open_task) = window::open(window_settings);
 
+        let mut system = System::new_all();
+        system.refresh_cpu_all();
+
         (
             Self {
                 window_id: None,
+                cpu_data: CpuData::new(&system),
+                system,
                 current_screen: Screen::Main,
                 app_screen: Screen::Main,
                 current_theme: Theme::GruvboxDark,
@@ -85,6 +95,12 @@ impl App {
                 println!("Button pressed");
                 Task::none()
             }
+            Message::UpdateTemperatures => {
+                // Refresh system data and update CPU data
+                self.system.refresh_cpu_all();
+                self.cpu_data = CpuData::new(&self.system);
+                Task::none()
+            }
         }
     }
 
@@ -93,7 +109,7 @@ impl App {
             return container("").into();
         }
         let page = match self.current_screen {
-            Screen::Main => main_window::view(),
+            Screen::Main => main_window::view(&self.cpu_data),
             Screen::Plotter => container("").into(),
             Screen::Settings => container("").into(),
         };
@@ -102,7 +118,10 @@ impl App {
         layout::with_header(page, &self.current_theme, &self.current_screen)
     }
 
-    fn subscription(&self) -> iced::Subscription<Message> {
-        window::close_events().map(Message::WindowClosed)
+    fn subscription(&self) -> Subscription<Message> { // https://docs.iced.rs/iced/#passive-subscriptions
+        Subscription::batch(vec![
+            window::close_events().map(Message::WindowClosed),
+            iced::time::every(Duration::from_secs(4)).map(|_| Message::UpdateTemperatures),
+        ])
     }
 }
