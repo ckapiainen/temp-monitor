@@ -44,7 +44,7 @@ struct App {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let window_settings = window::Settings {
-            size: iced::Size::new(800.0, 600.0),
+            size: iced::Size::new(850.0, 600.0),
             position: window::Position::Centered,
             min_size: Some(iced::Size::new(500.0, 400.0)),
             resizable: true,
