@@ -1,6 +1,8 @@
 [package]
 name = "temp-monitor"
-version = "0.0.1"
+version = "0.0.6"
+repository = "https://github.com/ckapiainen/temp-monitor"
+authors = ["ckapiainen"]
 edition = "2021"
 
 [dependencies]
@@ -14,6 +16,7 @@ env_logger = "0.11.8"
 wmi = "0.17.3"
 windows = { version = "0.52.0", features = [
     "Win32_Foundation",
+    "Win32_System_Performance",
     "Win32_UI_WindowsAndMessaging",
 ] }
 

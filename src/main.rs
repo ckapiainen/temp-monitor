@@ -7,6 +7,7 @@ use iced::{window, Element, Subscription, Task, Theme};
 use sysinfo::System;
 use app::{layout, main_window};
 use crate::collectors::cpu_collector::CpuData;
+use crate::collectors::frequency_collector::FrequencyMonitor;
 
 fn main() -> iced::Result {
     iced::daemon(|| App::new(), App::update, App::view)
@@ -40,6 +41,7 @@ struct App {
     current_screen: Screen,
     app_screen: Screen,
     current_theme: Theme,
+    frequency_monitor: Option<FrequencyMonitor>, 
 }
 impl App {
     fn new() -> (Self, Task<Message>) {
@@ -58,14 +60,21 @@ impl App {
         let mut system = System::new_all();
         system.refresh_cpu_all();
 
+        let cpu_data = CpuData::new(&system);
+
+        // Initialize frequency monitor
+        let frequency_monitor = FrequencyMonitor::new(*cpu_data.get_base_frequency())
+            .ok(); // If it fails just use base frequency
+
         (
             Self {
                 window_id: None,
-                cpu_data: CpuData::new(&system),
+                cpu_data,
                 system,
                 current_screen: Screen::Main,
                 app_screen: Screen::Main,
                 current_theme: Theme::GruvboxDark,
+                frequency_monitor,
             },
             open_task.map(Message::WindowOpened),
         )
@@ -99,6 +108,14 @@ impl App {
                 // Refresh system data and update CPU data
                 self.system.refresh_cpu_all();
                 self.cpu_data = CpuData::new(&self.system);
+
+                // Update current frequency if monitor is available
+                if let Some(ref monitor) = self.frequency_monitor {
+                    if let Ok(freq) = monitor.get_current_frequency() {
+                        self.cpu_data.update_frequency(freq);
+                    }
+                }
+
                 Task::none()
             }
         }
@@ -121,7 +138,7 @@ impl App {
     fn subscription(&self) -> Subscription<Message> { // https://docs.iced.rs/iced/#passive-subscriptions
         Subscription::batch(vec![
             window::close_events().map(Message::WindowClosed),
-            iced::time::every(Duration::from_secs(4)).map(|_| Message::UpdateTemperatures),
+            iced::time::every(Duration::from_secs(2)).map(|_| Message::UpdateTemperatures),
         ])
     }
 }
