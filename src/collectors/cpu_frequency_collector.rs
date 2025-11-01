@@ -7,6 +7,7 @@ use windows::Win32::System::Performance::{
 /*
  Keep freq monitoring as separate winapi query if user opts out of installing lhm-service
  */
+#[derive(Debug)]
 pub struct FrequencyMonitor {
     query: isize,
     counter: isize,

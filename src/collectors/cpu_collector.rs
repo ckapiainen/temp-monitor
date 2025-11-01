@@ -1,12 +1,12 @@
 use sysinfo::System;
-use crate::collectors::frequency_collector::FrequencyMonitor;
+use crate::collectors::cpu_frequency_collector::FrequencyMonitor;
 
 #[derive(Clone, Debug)]
 pub struct CoreData {
     pub name: String,
     pub usage: f32,
 }
-
+#[derive(Debug)]
 pub struct CpuData {
     cpu_name: String,
     cpu_count: u32,
