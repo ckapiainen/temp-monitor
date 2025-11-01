@@ -6,7 +6,6 @@ pub struct CoreData {
     pub name: String,
     pub usage: f32,
 }
-#[derive(Debug)]
 pub struct CpuData {
     cpu_name: String,
     cpu_count: u32,
@@ -70,7 +69,11 @@ impl CpuData {
     pub fn update(&mut self, sys: &mut System) {
         sys.refresh_cpu_all();
         self.cpu_usage = sys.global_cpu_usage();
-
+        for (i, cpu) in sys.cpus().iter().enumerate() {
+            if let Some(core_data) = self.cores.get_mut(i) {
+                core_data.usage = cpu.cpu_usage();
+            }
+        }
         if let Some(ref monitor) = self.frequency_monitor {
             if let Ok(freq) = monitor.get_current_frequency() {
                 self.current_frequency = freq;
