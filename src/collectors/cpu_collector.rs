@@ -1,4 +1,5 @@
 use sysinfo::System;
+use crate::collectors::frequency_collector::FrequencyMonitor;
 
 #[derive(Clone, Debug)]
 pub struct CoreData {
@@ -6,19 +7,21 @@ pub struct CoreData {
     pub usage: f32,
 }
 
-#[derive(Clone, Debug)]
 pub struct CpuData {
     cpu_name: String,
     cpu_count: u32,
     base_cpu_frequency: f64,
     cpu_usage: f32,
     cores: Vec<CoreData>,
+    frequency_monitor: Option<FrequencyMonitor>,
     current_frequency: f64,
 }
 
 impl CpuData {
     pub fn new(sys: &System) -> Self {
         let base_freq = sys.cpus()[0].frequency() as f64 / 1000.0;
+        let frequency_monitor = FrequencyMonitor::new(base_freq)
+            .ok(); // If it fails just use base frequency
 
         let cores: Vec<CoreData> = sys.cpus()
             .iter()
@@ -34,6 +37,7 @@ impl CpuData {
             base_cpu_frequency: base_freq,
             cpu_usage: sys.global_cpu_usage(),
             cores,
+            frequency_monitor,
             current_frequency: base_freq,
         }
     }
@@ -67,18 +71,10 @@ impl CpuData {
         sys.refresh_cpu_all();
         self.cpu_usage = sys.global_cpu_usage();
 
-        // Update core data
-        for (i, cpu) in sys.cpus().iter().enumerate() {
-            if let Some(core_data) = self.cores.get_mut(i) {
-                core_data.usage = cpu.cpu_usage();
+        if let Some(ref monitor) = self.frequency_monitor {
+            if let Ok(freq) = monitor.get_current_frequency() {
+                self.current_frequency = freq;
             }
         }
-
-        std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
-    }
-
-    // Update frequency with value from FrequencyMonitor
-    pub fn update_frequency(&mut self, frequency: f64) {
-        self.current_frequency = frequency;
     }
 }

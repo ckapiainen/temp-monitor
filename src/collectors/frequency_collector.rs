@@ -4,6 +4,9 @@ use windows::Win32::System::Performance::{
     PDH_FMT_COUNTERVALUE, PDH_FMT_DOUBLE,
 };
 
+/*
+ Keep freq monitoring as separate winapi query if user opts out of installing lhm-service
+ */
 pub struct FrequencyMonitor {
     query: isize,
     counter: isize,
