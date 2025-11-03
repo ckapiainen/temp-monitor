@@ -9,20 +9,20 @@ struct State {
     progress: f32,
 }
 pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
-    let cores = cpu_data.get_cores();
+    let cores = &cpu_data.cores;
     let heading = rich_text([
         span("CPU:").font(Font {
             weight: font::Weight::Bold,
             ..Font::default()
         }),
         span("  "),
-        span(cpu_data.get_name()).font(Font {
+        span(&cpu_data.cpu_name).font(Font {
             weight: font::Weight::Bold,
             ..Font::default()
         }),
     ])
-        .on_link_click(never)
-        .size(17);
+    .on_link_click(never)
+    .size(17);
 
     let heading = row![heading]
         .padding(Padding {
@@ -38,21 +38,33 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
     */
     let total_load = column![
         text("LOAD").size(20),
-        text(format!("{:.2}%", cpu_data.get_cpu_usage())).size(55)
+        text(format!("{:.2}%", cpu_data.cpu_usage)).size(55)
     ]
-        .align_x(Center);
+    .align_x(Center).width(150);
 
-    let temp = column![
-        text("TEMP").size(20),
-        text(format!("40 °C")).size(55) // todo: Placeholder value
+    let temp = rich_text![
+        span("TEMP\n").size(20),
+        span(format!("{:.1}", cpu_data.cpu_temp)).size(55),
+        span(" \u{00B0}").size(38).font(Font {
+                            weight: font::Weight::Light,
+                ..Font::default()
+        }),
+        span("C")
+            .font(Font {
+                weight: font::Weight::Light,
+                ..Font::default()
+            })
+            .size(35),
     ]
-        .align_x(Center);
+    .align_x(Center)
+    .on_link_click(never)
+    .width(170);
 
     let clock_speed = column![
         text("CLOCK SPEED").size(20),
-        text(format!("{:.0} MHz", cpu_data.get_current_frequency() * 1000.0)).size(55) // UPDATED: Real-time frequency
+        text(format!("{:.0} MHz", cpu_data.current_frequency * 1000.0)).size(55)
     ]
-        .align_x(Center);
+    .align_x(Center);
 
     let stats_row = row![
         total_load,
@@ -61,13 +73,13 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         rule::vertical(1),
         clock_speed
     ]
-        .spacing(25)
-        .padding(Padding {
-            top: 0.0,
-            right: 0.0,
-            bottom: 10.0,
-            left: 0.0,
-        });
+    .spacing(25)
+    .padding(Padding {
+        top: 0.0,
+        right: 0.0,
+        bottom: 10.0,
+        left: 0.0,
+    });
     let content = column![heading, rule::horizontal(1), stats_row]
         .align_x(Center)
         .spacing(15);
@@ -102,9 +114,9 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
                 })
                 .size(15),
         ]
-            .on_link_click(never)
-            .align_x(Center)
-            .width(55);
+        .on_link_click(never)
+        .align_x(Center)
+        .width(55);
         let core_col = column![utilization, name_util_val].align_x(Center);
         core_elements.push(core_col.into());
 
@@ -125,9 +137,9 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         rule::horizontal(1),
         core_row
     ]
-        .align_x(Center)
-        .spacing(10)
-        .padding(10);
+    .align_x(Center)
+    .spacing(10)
+    .padding(10);
 
     let cores_card = container(cores_card_content)
         .width(Fill)

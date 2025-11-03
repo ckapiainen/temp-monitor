@@ -7,13 +7,14 @@ pub struct CoreData {
     pub usage: f32,
 }
 pub struct CpuData {
-    cpu_name: String,
-    cpu_count: u32,
-    base_cpu_frequency: f64,
-    cpu_usage: f32,
-    cores: Vec<CoreData>,
+    pub cpu_name: String,
+    pub cpu_count: u32,
+    pub base_cpu_frequency: f64,
+    pub cpu_temp: f32,
+    pub cpu_usage: f32,
+    pub cores: Vec<CoreData>,
     frequency_monitor: Option<FrequencyMonitor>,
-    current_frequency: f64,
+    pub current_frequency: f64,
 }
 
 impl CpuData {
@@ -34,35 +35,12 @@ impl CpuData {
             cpu_name: sys.cpus()[0].brand().trim().replace("Processor","").to_string(),
             cpu_count: sys.cpus().len() as u32,
             base_cpu_frequency: base_freq,
+            cpu_temp: 0.0,
             cpu_usage: sys.global_cpu_usage(),
             cores,
             frequency_monitor,
             current_frequency: base_freq,
         }
-    }
-
-    pub fn get_name(&self) -> &str {
-        &self.cpu_name
-    }
-
-    pub fn get_count(&self) -> &u32 {
-        &self.cpu_count
-    }
-
-    pub fn get_base_frequency(&self) -> &f64 {
-        &self.base_cpu_frequency
-    }
-
-    pub fn get_current_frequency(&self) -> f64 {
-        self.current_frequency
-    }
-
-    pub fn get_cpu_usage(&self) -> &f32 {
-        &self.cpu_usage
-    }
-
-    pub fn get_cores(&self) -> &[CoreData] {
-        &self.cores
     }
 
     // Method to update dynamic data
