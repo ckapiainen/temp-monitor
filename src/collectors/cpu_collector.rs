@@ -1,4 +1,5 @@
 use sysinfo::System;
+use crate::collectors::lhm_collector::CoreStats;
 use crate::collectors::cpu_frequency_collector::FrequencyMonitor;
 
 #[derive(Clone, Debug)]
@@ -12,7 +13,9 @@ pub struct CpuData {
     pub base_cpu_frequency: f64,
     pub cpu_temp: f32,
     pub cpu_usage: f32,
-    pub cores: Vec<CoreData>,
+    pub core_utilization: Vec<CoreData>,
+    pub total_power_draw: f32,
+    pub core_power_draw: Vec<CoreStats>,
     frequency_monitor: Option<FrequencyMonitor>,
     pub current_frequency: f64,
 }
@@ -36,8 +39,10 @@ impl CpuData {
             cpu_count: sys.cpus().len() as u32,
             base_cpu_frequency: base_freq,
             cpu_temp: 0.0,
+            total_power_draw: 0.0,
+            core_power_draw: Vec::new(),
             cpu_usage: sys.global_cpu_usage(),
-            cores,
+            core_utilization: cores,
             frequency_monitor,
             current_frequency: base_freq,
         }
@@ -48,7 +53,7 @@ impl CpuData {
         sys.refresh_cpu_all();
         self.cpu_usage = sys.global_cpu_usage();
         for (i, cpu) in sys.cpus().iter().enumerate() {
-            if let Some(core_data) = self.cores.get_mut(i) {
+            if let Some(core_data) = self.core_utilization.get_mut(i) {
                 core_data.usage = cpu.cpu_usage();
             }
         }

@@ -9,7 +9,7 @@ struct State {
     progress: f32,
 }
 pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
-    let cores = &cpu_data.cores;
+    let cores = &cpu_data.core_utilization;
     let heading = rich_text([
         span("CPU:").font(Font {
             weight: font::Weight::Bold,

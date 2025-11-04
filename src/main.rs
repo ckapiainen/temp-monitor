@@ -2,7 +2,7 @@ mod app;
 mod collectors;
 
 use crate::collectors::cpu_collector::CpuData;
-use crate::collectors::cpu_temps::cpu_temps_query;
+use crate::collectors::lhm_collector::{lhm_cpu_queries, CoreStats};
 use app::{layout, main_window};
 use colored::Colorize;
 use iced::widget::container;
@@ -87,8 +87,8 @@ enum Message {
     MainButtonPressed,
     PlotterButtonPressed,
     SettingsButtonPressed,
-    UpdateTemperatures,
-    CpuTempsUpdated(f32),
+    UpdateHardwareData,
+    CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
     HardwareMonitorConnected(Option<lhm_client::LHMClientHandle>),
 }
 #[derive(Clone, Debug)]
@@ -102,7 +102,6 @@ struct App {
     window_id: Option<window::Id>,
     hw_monitor_service: Option<lhm_client::LHMClientHandle>,
     cpu_data: CpuData,
-    cpu_temp: f32,
     system: System,
     current_screen: Screen,
     app_screen: Screen,
@@ -135,7 +134,6 @@ impl App {
                 window_id: None,
                 hw_monitor_service,
                 cpu_data,
-                cpu_temp: 0.0,
                 system,
                 current_screen: Screen::Main,
                 app_screen: Screen::Main,
@@ -167,7 +165,7 @@ impl App {
                 Task::none()
             }
             Message::WindowClosed(_) => {
-                println!("Window closed, daemon still running..."); // debug reminder...
+                dbg!("Window closed, daemon still running...");
                 Task::none()
             }
             Message::ThemeChanged(theme) => {
@@ -180,22 +178,25 @@ impl App {
                 println!("Button pressed");
                 Task::none()
             }
-            Message::UpdateTemperatures => {
+            Message::UpdateHardwareData => {
                 self.cpu_data.update(&mut self.system);
 
                 if let Some(client) = &self.hw_monitor_service {
                     let client = client.clone();
-                    Task::future(async move {
+                    Task::future(async move { // NOTE TO SELF: Task::future always needs to return message
                         client.update_all().await.expect("Error updating hardware");
-                        let temps = cpu_temps_query(&client).await;
-                        Message::CpuTempsUpdated(temps)
+                        let temps = lhm_cpu_queries(&client).await;
+                        Message::CpuValuesUpdated(temps)
                     })
                 } else {
                     Task::none()
                 }
             }
-            Message::CpuTempsUpdated(temps) => {
-                self.cpu_temp = temps;
+            Message::CpuValuesUpdated(temps) => {
+                // Collect everything from lhm queries into CpuData
+                self.cpu_data.cpu_temp = temps.0;
+                self.cpu_data.total_power_draw = temps.1;
+                self.cpu_data.core_power_draw = temps.2;
                 Task::none()
             }
         }
@@ -218,7 +219,7 @@ impl App {
         // https://docs.iced.rs/iced/#passive-subscriptions
         Subscription::batch(vec![
             window::close_events().map(Message::WindowClosed),
-            iced::time::every(Duration::from_secs(2)).map(|_| Message::UpdateTemperatures),
+            iced::time::every(Duration::from_secs(2)).map(|_| Message::UpdateHardwareData),
         ])
     }
 }
