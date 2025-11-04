@@ -2,7 +2,8 @@ mod app;
 mod collectors;
 
 use crate::collectors::cpu_collector::CpuData;
-use crate::collectors::lhm_collector::{lhm_cpu_queries, CoreStats};
+use crate::collectors::lhm_collector::lhm_cpu_queries;
+use crate::collectors::CoreStats;
 use app::{layout, main_window};
 use colored::Colorize;
 use iced::widget::container;
@@ -89,6 +90,8 @@ enum Message {
     SettingsButtonPressed,
     UpdateHardwareData,
     CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
+    CoreCardUsageButtonPressed,
+    CoreCardPowerButtonPressed,
     HardwareMonitorConnected(Option<lhm_client::LHMClientHandle>),
 }
 #[derive(Clone, Debug)]
@@ -157,8 +160,11 @@ impl App {
                 self.hw_monitor_service = client;
                 if self.hw_monitor_service.is_some() {
                     println!("{}", "✓ Connected to hardware monitor".green());
+                    // Trigger initial update after service connects
+                    Task::done(Message::UpdateHardwareData)
+                } else {
+                    Task::none()
                 }
-                Task::none()
             }
             Message::WindowOpened(id) => {
                 self.window_id = Some(id);
@@ -176,6 +182,14 @@ impl App {
             | Message::PlotterButtonPressed
             | Message::SettingsButtonPressed => {
                 println!("Button pressed");
+                Task::none()
+            }
+            Message::CoreCardUsageButtonPressed => {
+                println!("Core card usage button pressed");
+                Task::none()
+            }
+            Message::CoreCardPowerButtonPressed => {
+                println!("Core card power button pressed");
                 Task::none()
             }
             Message::UpdateHardwareData => {
@@ -219,7 +233,7 @@ impl App {
         // https://docs.iced.rs/iced/#passive-subscriptions
         Subscription::batch(vec![
             window::close_events().map(Message::WindowClosed),
-            iced::time::every(Duration::from_secs(2)).map(|_| Message::UpdateHardwareData),
+            iced::time::every(Duration::from_secs(1)).map(|_| Message::UpdateHardwareData),
         ])
     }
 }

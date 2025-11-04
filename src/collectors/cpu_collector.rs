@@ -1,19 +1,14 @@
 use sysinfo::System;
-use crate::collectors::lhm_collector::CoreStats;
+use super::CoreStats;
 use crate::collectors::cpu_frequency_collector::FrequencyMonitor;
 
-#[derive(Clone, Debug)]
-pub struct CoreData {
-    pub name: String,
-    pub usage: f32,
-}
 pub struct CpuData {
     pub cpu_name: String,
     pub cpu_count: u32,
     pub base_cpu_frequency: f64,
     pub cpu_temp: f32,
     pub cpu_usage: f32,
-    pub core_utilization: Vec<CoreData>,
+    pub core_utilization: Vec<CoreStats>,
     pub total_power_draw: f32,
     pub core_power_draw: Vec<CoreStats>,
     frequency_monitor: Option<FrequencyMonitor>,
@@ -26,11 +21,11 @@ impl CpuData {
         let frequency_monitor = FrequencyMonitor::new(base_freq)
             .ok(); // If it fails just use base frequency
 
-        let cores: Vec<CoreData> = sys.cpus()
+        let cores: Vec<CoreStats> = sys.cpus()
             .iter()
-            .map(|cpu| CoreData {
+            .map(|cpu| CoreStats {
                 name: cpu.name().to_string(),
-                usage: cpu.cpu_usage(),
+                value: cpu.cpu_usage(),
             })
             .collect();
 
@@ -54,7 +49,7 @@ impl CpuData {
         self.cpu_usage = sys.global_cpu_usage();
         for (i, cpu) in sys.cpus().iter().enumerate() {
             if let Some(core_data) = self.core_utilization.get_mut(i) {
-                core_data.usage = cpu.cpu_usage();
+                core_data.value = cpu.cpu_usage();
             }
         }
         if let Some(ref monitor) = self.frequency_monitor {

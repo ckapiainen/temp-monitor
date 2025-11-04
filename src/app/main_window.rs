@@ -1,15 +1,14 @@
 use crate::app::styles;
 use crate::collectors::cpu_collector::CpuData;
 use crate::Message;
-use iced::widget::{
-    center, column, container, progress_bar, rich_text, row, rule, space, span, text, Grid, Row,
-};
+use iced::widget::{button, center, column, container, progress_bar, rich_text, row, rule, space, span, text, Grid, Row};
 use iced::{font, never, Bottom, Center, Element, Fill, Font, Padding, Theme, Top};
 struct State {
     progress: f32,
 }
 pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
-    let cores = &cpu_data.core_utilization;
+    let core_usage_vector = &cpu_data.core_utilization;
+    let core_power_draw_vector = &cpu_data.core_power_draw;
     let heading = rich_text([
         span("CPU:").font(Font {
             weight: font::Weight::Bold,
@@ -40,14 +39,15 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         text("LOAD").size(20),
         text(format!("{:.2}%", cpu_data.cpu_usage)).size(55)
     ]
-    .align_x(Center).width(150);
+    .align_x(Center)
+    .width(150);
 
     let temp = rich_text![
         span("TEMP\n").size(20),
         span(format!("{:.1}", cpu_data.cpu_temp)).size(55),
         span(" \u{00B0}").size(38).font(Font {
-                            weight: font::Weight::Light,
-                ..Font::default()
+            weight: font::Weight::Light,
+            ..Font::default()
         }),
         span("C")
             .font(Font {
@@ -89,19 +89,19 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         .clip(true);
 
     /*
-    Core specific stats
+      CORE USAGE COLUMNS
     */
 
     // Build core row with vertical rules between cores
-    let mut core_elements: Vec<Element<Message>> = Vec::new();
-    for (i, core) in cores.iter().enumerate() {
-        let utilization = progress_bar(0.0..=100.0, core.usage)
+    let mut usage_bar_chart: Vec<Element<Message>> = Vec::new();
+    for (i, core) in core_usage_vector.iter().enumerate() {
+        let utilization = progress_bar(0.0..=100.0, core.value)
             .vertical()
             .length(150)
             .girth(35);
 
         let name_util_val = rich_text![
-            span(format!("{:.2}%\n", core.usage))
+            span(format!("{:.2}%\n", core.value))
                 .font(Font {
                     weight: font::Weight::Thin,
                     ..Font::default()
@@ -118,24 +118,96 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         .align_x(Center)
         .width(55);
         let core_col = column![utilization, name_util_val].align_x(Center);
-        core_elements.push(core_col.into());
+        usage_bar_chart.push(core_col.into());
 
         // Add vertical rule between cores but not after the last one
-        if i < cores.len() - 1 {
-            core_elements.push(rule::vertical(1).into());
+        if i < core_usage_vector.len() - 1 {
+            usage_bar_chart.push(rule::vertical(1).into());
         }
     }
 
-    let core_row = Row::with_children(core_elements).spacing(3);
+    /*
+      CORE POWER DRAW COLUMNS
+    */
+    let mut power_bar_chart: Vec<Element<Message>> = Vec::new();
+    for (i, core) in core_power_draw_vector.iter().enumerate() {
+        let wattage_bar = progress_bar(0.0..=20.0, core.value)
+            .vertical()
+            .length(150)
+            .girth(35);
 
-    // Core usage card
+        let name_util_val = rich_text![
+            span(format!("{:.2}W\n", core.value))
+                .font(Font {
+                    weight: font::Weight::Thin,
+                    ..Font::default()
+                })
+                .size(15),
+            span(format!("{}", core.name))
+                .font(Font {
+                    weight: font::Weight::Thin,
+                    ..Font::default()
+                })
+                .size(15),
+        ]
+            .on_link_click(never)
+            .align_x(Center)
+            .width(55);
+        let core_col = column![wattage_bar, name_util_val].align_x(Center);
+        power_bar_chart.push(core_col.into());
+
+        // Add vertical rule between cores but not after the last one
+        if i < core_usage_vector.len() - 1 {
+            power_bar_chart.push(rule::vertical(1).into());
+        }
+    }
+    let core_usage_row = Row::with_children(usage_bar_chart).spacing(3);
+    let core_power_row = Row::with_children(power_bar_chart).spacing(3);
+
+
+    // Core card
+    let usage_button = button(
+        container(text("U").size(11))
+            .align_x(Center)
+            .align_y(Center)
+            .width(Fill)
+            .height(Fill)
+    )
+    .on_press(Message::CoreCardUsageButtonPressed)
+    .style(styles::compact_icon_button_style)
+    .width(50)
+    .height(23);
+
+    let power_button = button(
+        container(text("P").size(11))
+            .align_x(Center)
+            .align_y(Center)
+            .width(Fill)
+            .height(Fill)
+    )
+    .on_press(Message::CoreCardPowerButtonPressed)
+    .style(styles::compact_icon_button_style)
+    .width(50)
+    .height(23);
+
+    let button_group = row![usage_button, power_button].spacing(5);
+
+    let header_text = container(text("CORE USAGE").size(15).font(Font {
+        weight: font::Weight::Bold,
+        ..Font::default()
+    }))
+    .width(Fill)
+    .align_x(Center);
+
+    let header_row = row![header_text, button_group]
+        .align_y(Center)
+        .spacing(10)
+        .width(Fill);
+
     let cores_card_content = column![
-        text("CORE USAGE").size(15).font(Font {
-            weight: font::Weight::Bold,
-            ..Font::default()
-        }),
+        header_row,
         rule::horizontal(1),
-        core_row
+        core_usage_row
     ]
     .align_x(Center)
     .spacing(10)
@@ -143,7 +215,7 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
 
     let cores_card = container(cores_card_content)
         .width(Fill)
-        .height(250)
+        .height(280)
         .align_x(Center)
         .align_y(Center)
         .style(styles::card_container_style);

@@ -1,9 +1,5 @@
 use lhm_client::{HardwareType, SensorType};
-#[derive(Debug, Clone)]
-pub struct CoreStats {
-    core: String,
-    value: f32,
-}
+use super::CoreStats;
 
 pub async fn lhm_cpu_queries(client: &lhm_client::LHMClientHandle) -> (f32, f32, Vec<CoreStats>) {
     // Request all CPU hardware
@@ -50,7 +46,7 @@ pub async fn lhm_cpu_queries(client: &lhm_client::LHMClientHandle) -> (f32, f32,
         core_power = power_query.iter()
             .filter(|sensor| sensor.name.contains("Core"))
             .map(|sensor| CoreStats {
-                core: sensor.name.clone(),
+                name: sensor.name.clone(),
                 value: sensor.value
             })
             .collect();

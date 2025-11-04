@@ -64,6 +64,67 @@ pub fn rounded_button_style(_theme: &Theme, status: button::Status) -> button::S
     }
 }
 
+pub fn compact_icon_button_style(_theme: &Theme, status: button::Status) -> button::Style {
+    match status {
+        button::Status::Active => button::Style {
+            background: Some(Background::Color(iced::Color::from_rgb(0.2, 0.2, 0.21))),
+            border: iced::Border {
+                color: iced::Color::from_rgba(0.35, 0.35, 0.4, 0.4),
+                width: 1.0,
+                radius: iced::border::Radius::from(10.0), // Pill capsule shape
+            },
+            text_color: iced::Color::from_rgb(0.85, 0.85, 0.85),
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.2),
+                offset: iced::Vector::new(0.0, 1.0),
+                blur_radius: 2.0,
+            },
+            snap: false,
+        },
+        button::Status::Hovered => button::Style {
+            background: Some(Background::Color(iced::Color::from_rgb(0.26, 0.26, 0.28))),
+            border: iced::Border {
+                color: iced::Color::from_rgba(0.5, 0.5, 0.55, 0.7),
+                width: 1.0,
+                radius: iced::border::Radius::from(10.0),
+            },
+            text_color: iced::Color::WHITE,
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.3),
+                offset: iced::Vector::new(0.0, 1.5),
+                blur_radius: 4.0,
+            },
+            snap: false,
+        },
+        button::Status::Pressed => button::Style {
+            background: Some(Background::Color(iced::Color::from_rgb(0.16, 0.16, 0.17))),
+            border: iced::Border {
+                color: iced::Color::from_rgba(0.3, 0.3, 0.35, 0.5),
+                width: 1.0,
+                radius: iced::border::Radius::from(10.0),
+            },
+            text_color: iced::Color::from_rgb(0.7, 0.7, 0.7),
+            shadow: iced::Shadow {
+                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.15),
+                offset: iced::Vector::new(0.0, 0.5),
+                blur_radius: 1.0,
+            },
+            snap: false,
+        },
+        button::Status::Disabled => button::Style {
+            background: Some(Background::Color(iced::Color::from_rgb(0.15, 0.15, 0.15))),
+            border: iced::Border {
+                color: iced::Color::from_rgba(0.2, 0.2, 0.2, 0.3),
+                width: 1.0,
+                radius: iced::border::Radius::from(10.0),
+            },
+            text_color: iced::Color::from_rgb(0.4, 0.4, 0.4),
+            shadow: iced::Shadow::default(),
+            snap: false,
+        },
+    }
+}
+
 pub fn card_container_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(iced::Color::from_rgb(0.18, 0.18, 0.19))),
