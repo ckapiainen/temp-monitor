@@ -30,11 +30,12 @@ product_name = "TempMon"
 icons = ["assets/logo.ico"]
 # bundled dependencies
 resources = [
+    "bundle/PawnIO_setup.exe",
     "bundle/lhm-service.exe",
     "bundle/lhm-bridge.dll",
 ]
 
 [package.metadata.packager.nsis]
 installMode = "both"
-template = "nsis/installer.nsi"
+template = "bundle/nsis/installer.nsi"
 languages = ["English"]

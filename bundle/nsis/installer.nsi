@@ -48,16 +48,15 @@ Section "MainSection" SEC01
     File /a "/oname={{this}}" "{{@key}}"
     {{/each}}
 
-    ; NOTE: PawnIO driver installation commented out - add pawnio-installer.exe to bundle/ directory to enable
     ; Check and install PawnIO driver
-    ;DetailPrint "Checking for PawnIO driver..."
-    ;ReadRegStr $0 HKLM "SOFTWARE\PawnIO" "InstallPath"
-    ;${If} $0 == ""
-    ;    DetailPrint "PawnIO not found, installing..."
-    ;    ExecWait '"$INSTDIR\pawnio-installer.exe"'
-    ;${Else}
-    ;    DetailPrint "PawnIO already installed at: $0"
-    ;${EndIf}
+    DetailPrint "Checking for PawnIO driver..."
+    ReadRegStr $0 HKLM "SOFTWARE\PawnIO" "InstallPath"
+    ${If} $0 == ""
+        DetailPrint "PawnIO not found, installing..."
+        ExecWait '"$INSTDIR\PawnIO_setup.exe"'
+    ${Else}
+        DetailPrint "PawnIO already installed at: $0"
+    ${EndIf}
 
     ; Check and install LibreHardwareMonitor service
     DetailPrint "Checking for LibreHardwareMonitor service..."
