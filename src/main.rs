@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"] // hide terminal on Windows
 mod app;
 mod collectors;
 
@@ -7,7 +8,7 @@ use crate::collectors::CoreStats;
 use app::{layout, main_window};
 use colored::Colorize;
 use iced::widget::container;
-use iced::{window, Element, Subscription, Task, Theme};
+use iced::{window, Element, Program, Subscription, Task, Theme};
 use lhm_client::service::is_service_installed;
 use lhm_client::{ComputerOptions, LHMClient};
 use std::time::Duration;
@@ -116,6 +117,7 @@ impl App {
             size: iced::Size::new(850.0, 600.0),
             position: window::Position::Centered,
             min_size: Some(iced::Size::new(500.0, 400.0)),
+            icon: window::icon::from_file("assets/logo.ico").ok(),
             resizable: true,
             decorations: true,
             level: window::Level::Normal,

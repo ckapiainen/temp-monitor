@@ -6,10 +6,9 @@ authors = ["ckapiainen"]
 edition = "2021"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "canvas", "advanced"] }
+iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "image"] }
 tokio = { version = "=1.45.1", features = ["rt", "time", "fs", "macros"] }
 colored = "3.0.0"
-plotters-iced = "0.11"
 tray-icon = "0.14.3"
 image = { version = "0.25", features = ["jpeg", "png"] }
 sysinfo = "0.37.2"
@@ -23,3 +22,19 @@ windows = { version = "0.52.0", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
+[package.metadata.packager]
+formats = ["nsis"]
+identifier = "com.temp-monitor"
+publisher = "ckapiainen"
+product_name = "TempMon"
+icons = ["assets/logo.ico"]
+# bundled dependencies
+resources = [
+    "bundle/lhm-service.exe",
+    "bundle/lhm-bridge.dll",
+]
+
+[package.metadata.packager.nsis]
+installMode = "both"
+template = "nsis/installer.nsi"
+languages = ["English"]
