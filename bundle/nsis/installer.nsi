@@ -50,12 +50,17 @@ Section "MainSection" SEC01
 
     ; Check and install PawnIO driver
     DetailPrint "Checking for PawnIO driver..."
-    ReadRegStr $0 HKLM "SOFTWARE\PawnIO" "InstallPath"
+    ReadRegStr $0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO" "DisplayName"
     ${If} $0 == ""
         DetailPrint "PawnIO not found, installing..."
-        ExecWait '"$INSTDIR\PawnIO_setup.exe"'
+        ExecWait '"$INSTDIR\PawnIO_setup.exe"' $1
+        ${If} $1 == 0
+            DetailPrint "PawnIO installed successfully"
+        ${Else}
+            DetailPrint "Warning: PawnIO installation returned code $1 (may require reboot)"
+        ${EndIf}
     ${Else}
-        DetailPrint "PawnIO already installed at: $0"
+        DetailPrint "PawnIO already installed: $0"
     ${EndIf}
 
     ; Check and install LibreHardwareMonitor service
@@ -65,7 +70,7 @@ Section "MainSection" SEC01
     ${If} $0 != 0
         DetailPrint "LHM service not found, installing..."
         ; Create service with sc create
-        ExecWait 'sc create LibreHardwareMonitorService binPath= "$INSTDIR\lhm-service.exe" start= auto DisplayName= "LibreHardwareMonitor Service"' $0
+        ExecWait 'sc create LibreHardwareMonitorService binPath= "$INSTDIR\lhm-service.exe" start= auto DisplayName= "LibreHardwareMonitor Service" type= own' $0
         ${If} $0 == 0
             DetailPrint "Service created successfully"
             ; Start the service
@@ -85,12 +90,12 @@ Section "MainSection" SEC01
     ; Create Start Menu shortcuts
     CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
     CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" \
-        "$INSTDIR\temp-monitor.exe"
+        "$INSTDIR\temp-monitor.exe" "" "$INSTDIR\logo.ico" 0
     CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk" \
         "$INSTDIR\uninstall.exe"
 
-    ; Optional: Create desktop shortcut
-    CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\temp-monitor.exe"
+    ; Create desktop shortcut
+    CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\temp-monitor.exe" "" "$INSTDIR\logo.ico" 0
 
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"
