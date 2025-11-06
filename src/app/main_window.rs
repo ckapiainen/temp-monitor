@@ -1,12 +1,43 @@
 use crate::app::styles;
 use crate::collectors::cpu_collector::CpuData;
-use crate::Message;
-use iced::widget::{button, center, column, container, progress_bar, rich_text, row, rule, space, span, text, Grid, Row};
-use iced::{font, never, Bottom, Center, Element, Fill, Font, Padding, Theme, Top};
-struct State {
-    progress: f32,
+use iced::widget::{button, center, column, container, progress_bar, rich_text, row, rule, span, text, Row};
+use iced::{font, never, Center, Element, Fill, Font, Padding};
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BarChartState {
+    Usage,
+    Power,
 }
-pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
+
+#[derive(Debug, Clone)]
+pub enum Message {
+    UsageButtonPressed,
+    PowerButtonPressed,
+}
+
+pub struct MainWindow {
+    bar_chart_state: BarChartState,
+}
+
+impl MainWindow {
+    pub fn new() -> Self {
+        Self {
+            bar_chart_state: BarChartState::Usage,
+        }
+    }
+
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::UsageButtonPressed => {
+                self.bar_chart_state = BarChartState::Usage;
+            }
+            Message::PowerButtonPressed => {
+                self.bar_chart_state = BarChartState::Power;
+            }
+        }
+    }
+
+    pub fn view<'a>(&self, cpu_data: &'a CpuData) -> Element<'a, Message> {
     let core_usage_vector = &cpu_data.core_utilization;
     let core_power_draw_vector = &cpu_data.core_power_draw;
     let heading = rich_text([
@@ -116,7 +147,7 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         ]
         .on_link_click(never)
         .align_x(Center)
-        .width(55);
+        .width(70);
         let core_col = column![utilization, name_util_val].align_x(Center);
         usage_bar_chart.push(core_col.into());
 
@@ -143,7 +174,7 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
                     ..Font::default()
                 })
                 .size(15),
-            span(format!("{}", core.name))
+            span(format!("{}", core.name.replace("#", "")))
                 .font(Font {
                     weight: font::Weight::Thin,
                     ..Font::default()
@@ -152,7 +183,7 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
         ]
             .on_link_click(never)
             .align_x(Center)
-            .width(55);
+            .width(70);
         let core_col = column![wattage_bar, name_util_val].align_x(Center);
         power_bar_chart.push(core_col.into());
 
@@ -161,8 +192,8 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
             power_bar_chart.push(rule::vertical(1).into());
         }
     }
-    let core_usage_row = Row::with_children(usage_bar_chart).spacing(3);
-    let core_power_row = Row::with_children(power_bar_chart).spacing(3);
+    let core_usage_row = Row::with_children(usage_bar_chart).spacing(1);
+    let core_power_row = Row::with_children(power_bar_chart).spacing(1);
 
 
     // Core card
@@ -173,7 +204,7 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
             .width(Fill)
             .height(Fill)
     )
-    .on_press(Message::CoreCardUsageButtonPressed)
+    .on_press(Message::UsageButtonPressed)
     .style(styles::compact_icon_button_style)
     .width(50)
     .height(23);
@@ -185,7 +216,7 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
             .width(Fill)
             .height(Fill)
     )
-    .on_press(Message::CoreCardPowerButtonPressed)
+    .on_press(Message::PowerButtonPressed)
     .style(styles::compact_icon_button_style)
     .width(50)
     .height(23);
@@ -207,7 +238,10 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
     let cores_card_content = column![
         header_row,
         rule::horizontal(1),
-        core_usage_row
+        match self.bar_chart_state {
+            BarChartState::Usage => core_usage_row,
+            BarChartState::Power => core_power_row,
+        }
     ]
     .align_x(Center)
     .spacing(10)
@@ -222,4 +256,5 @@ pub fn view(cpu_data: &CpuData) -> Element<'_, Message> {
 
     let all_cards = column![general_cpu_info_card, cores_card].spacing(20);
     container(all_cards).padding(20).width(Fill).into()
+    }
 }

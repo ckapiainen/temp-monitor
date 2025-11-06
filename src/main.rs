@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"] // hide terminal on Windows
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide terminal on Windows
 mod app;
 mod collectors;
 
@@ -91,8 +91,7 @@ enum Message {
     SettingsButtonPressed,
     UpdateHardwareData,
     CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
-    CoreCardUsageButtonPressed,
-    CoreCardPowerButtonPressed,
+    MainWindow(main_window::Message),
     HardwareMonitorConnected(Option<lhm_client::LHMClientHandle>),
 }
 #[derive(Clone, Debug)]
@@ -110,6 +109,7 @@ struct App {
     current_screen: Screen,
     app_screen: Screen,
     current_theme: Theme,
+    main_window: main_window::MainWindow,
 }
 impl App {
     fn new() -> (Self, Task<Message>) {
@@ -143,6 +143,7 @@ impl App {
                 current_screen: Screen::Main,
                 app_screen: Screen::Main,
                 current_theme: Theme::GruvboxDark,
+                main_window: main_window::MainWindow::new(),
             },
             Task::batch(vec![
                 // Batch tasks to run in parallel
@@ -186,12 +187,8 @@ impl App {
                 println!("Button pressed");
                 Task::none()
             }
-            Message::CoreCardUsageButtonPressed => {
-                println!("Core card usage button pressed");
-                Task::none()
-            }
-            Message::CoreCardPowerButtonPressed => {
-                println!("Core card power button pressed");
+            Message::MainWindow(msg) => {
+                self.main_window.update(msg);
                 Task::none()
             }
             Message::UpdateHardwareData => {
@@ -223,7 +220,7 @@ impl App {
             return container("").into();
         }
         let page = match self.current_screen {
-            Screen::Main => main_window::view(&self.cpu_data),
+            Screen::Main => self.main_window.view(&self.cpu_data).map(Message::MainWindow),
             Screen::Plotter => container("").into(),
             Screen::Settings => container("").into(),
         };
