@@ -17,11 +17,10 @@ SetCompressor /SOLID lzma
 
 ; ===== UI Configuration =====
 !define MUI_ABORTWARNING
-!define INSTALLERICON "{{installer_icon}}"
-!if "${INSTALLERICON}" != ""
- !define MUI_ICON "${INSTALLERICON}"
- !define MUI_UNICON "${INSTALLERICON}"
-!endif
+{{#if installer_icon}}
+!define MUI_ICON "{{installer_icon}}"
+!define MUI_UNICON "{{installer_icon}}"
+{{/if}}
 
 ; ===== Pages =====
 !insertmacro MUI_PAGE_WELCOME

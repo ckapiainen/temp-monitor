@@ -11,8 +11,6 @@ iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "
 tokio = { version = "=1.45.1", features = ["rt", "time", "fs", "macros"] }
 colored = "3.0.0"
 tray-icon = "0.14.3"
-tray-item = "0.10.0"
-once_cell = "1.20"
 image = { version = "0.25", features = ["jpeg", "png"] }
 sysinfo = "0.37.2"
 csv = "1.4.0"
@@ -33,6 +31,7 @@ product_name = "TempMon"
 icons = ["assets/logo.ico"]
 # bundled dependencies
 resources = [
+    "assets/logo.ico",
     "bundle/PawnIO_setup.exe",
     "bundle/lhm-service.exe",
     "bundle/lhm-bridge.dll",
@@ -42,6 +41,7 @@ resources = [
 installMode = "both"
 template = "bundle/nsis/installer.nsi"
 languages = ["English"]
+installer_icon = "assets/logo.ico"
 
 [build-dependencies]
 embed-resource = "2.4"

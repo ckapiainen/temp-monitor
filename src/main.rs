@@ -13,6 +13,7 @@ use lhm_client::service::is_service_installed;
 use lhm_client::{ComputerOptions, LHMClient};
 use std::time::Duration;
 use sysinfo::System;
+use tray_icon::{menu::{Menu, MenuItem,PredefinedMenuItem, MenuEvent, MenuId}, Icon, TrayIconBuilder};
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -85,6 +86,7 @@ fn main() -> iced::Result {
 enum Message {
     WindowOpened(window::Id),
     WindowClosed(window::Id),
+    TrayEvent(MenuId),
     ThemeChanged(Theme),
     MainButtonPressed,
     PlotterButtonPressed,
@@ -110,11 +112,30 @@ struct App {
     app_screen: Screen,
     current_theme: Theme,
     main_window: main_window::MainWindow,
+    tray_icon: tray_icon::TrayIcon,
+    show_menu_id: MenuId,
+    quit_menu_id: MenuId,
 }
+
 impl App {
+    /// Update tray tooltip with live hw data
+   // TODO: Change icon color based on temperature
+    fn update_tray_tooltip(&self) {
+        let tooltip = format!(
+            "CPU: {:.0}°C ({:.0}%)\nPower: {:.1}W",
+            self.cpu_data.cpu_temp,
+            self.cpu_data.cpu_usage,
+            self.cpu_data.total_power_draw
+        );
+
+        if let Err(e) = self.tray_icon.set_tooltip(Some(&tooltip)) {
+            eprintln!("Failed to update tray tooltip: {}", e);
+        }
+    }
+
     fn new() -> (Self, Task<Message>) {
         let window_settings = window::Settings {
-            size: iced::Size::new(850.0, 600.0),
+            size: iced::Size::new(950.0, 600.0),
             position: window::Position::Centered,
             min_size: Some(iced::Size::new(500.0, 400.0)),
             icon: window::icon::from_file("assets/logo.ico").ok(),
@@ -125,6 +146,35 @@ impl App {
         };
 
         let (_, open_task) = window::open(window_settings);
+
+        // Load tray icon from bytes
+        const ICON_DATA: &[u8] = include_bytes!("../assets/logo.ico");
+        let image = image::load_from_memory(ICON_DATA)
+            .expect("Failed to load icon from memory")
+            .into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        let icon=Icon::from_rgba(rgba, width, height).expect("Failed to create icon");
+        // Create tray menu
+        let menu = Menu::new();
+        let show_item = MenuItem::new("Show Window", true, None);
+        let quit_item = MenuItem::new("Quit", true, None);
+        let separator = PredefinedMenuItem::separator();
+
+        // Store menu IDs for event handling
+        let show_id = show_item.id().clone();
+        let quit_id = quit_item.id().clone();
+
+        menu.append_items(&[&show_item, &separator, &quit_item])
+            .expect("Failed to append menu items");
+
+        // Build tray icon
+        let tray_icon = TrayIconBuilder::new()
+            .with_tooltip("TempMon")
+            .with_icon(icon)
+            .with_menu(Box::new(menu))
+            .build()
+            .expect("Failed to create tray icon");
 
         let mut system = System::new_all();
         system.refresh_cpu_all();
@@ -144,6 +194,9 @@ impl App {
                 app_screen: Screen::Main,
                 current_theme: Theme::GruvboxDark,
                 main_window: main_window::MainWindow::new(),
+                tray_icon,
+                show_menu_id: show_id,
+                quit_menu_id: quit_id,
             },
             Task::batch(vec![
                 // Batch tasks to run in parallel
@@ -173,9 +226,34 @@ impl App {
                 self.window_id = Some(id);
                 Task::none()
             }
-            Message::WindowClosed(_) => {
+            Message::WindowClosed(id) => {
                 dbg!("Window closed, daemon still running...");
+                self.window_id = None;
                 Task::none()
+            }
+            Message::TrayEvent(menu_id) => {
+                if menu_id == self.show_menu_id {
+                    // If window is closed, reopen it
+                    if self.window_id.is_none() {
+                        let window_settings = window::Settings {
+                            size: iced::Size::new(950.0, 600.0),
+                            position: window::Position::Centered,
+                            min_size: Some(iced::Size::new(500.0, 400.0)),
+                            icon: window::icon::from_file("assets/logo.ico").ok(),
+                            resizable: true,
+                            decorations: true,
+                            level: window::Level::Normal,
+                            ..Default::default()
+                        };
+                        let (_, open_task) = window::open(window_settings);
+                        return open_task.map(Message::WindowOpened);
+                    }
+                    Task::none()
+                } else if menu_id == self.quit_menu_id {
+                    std::process::exit(0);
+                } else {
+                    Task::none()
+                }
             }
             Message::ThemeChanged(theme) => {
                 self.current_theme = theme;
@@ -196,7 +274,8 @@ impl App {
 
                 if let Some(client) = &self.hw_monitor_service {
                     let client = client.clone();
-                    Task::future(async move { // NOTE TO SELF: Task::future always needs to return message
+                    Task::future(async move {
+                        // NOTE TO SELF: Task::future always needs to return message
                         client.update_all().await.expect("Error updating hardware");
                         let temps = lhm_cpu_queries(&client).await;
                         Message::CpuValuesUpdated(temps)
@@ -210,6 +289,10 @@ impl App {
                 self.cpu_data.cpu_temp = temps.0;
                 self.cpu_data.total_power_draw = temps.1;
                 self.cpu_data.core_power_draw = temps.2;
+
+                // Update tray tooltip with fresh hardware data
+                self.update_tray_tooltip();
+
                 Task::none()
             }
         }
@@ -220,7 +303,10 @@ impl App {
             return container("").into();
         }
         let page = match self.current_screen {
-            Screen::Main => self.main_window.view(&self.cpu_data).map(Message::MainWindow),
+            Screen::Main => self
+                .main_window
+                .view(&self.cpu_data)
+                .map(Message::MainWindow),
             Screen::Plotter => container("").into(),
             Screen::Settings => container("").into(),
         };
@@ -233,6 +319,28 @@ impl App {
         Subscription::batch(vec![
             window::close_events().map(Message::WindowClosed),
             iced::time::every(Duration::from_secs(1)).map(|_| Message::UpdateHardwareData),
+            tray_events_subscription(),
         ])
     }
+}
+
+/// Subscription for tray menu events
+fn tray_events_subscription() -> Subscription<Message> {
+    use iced::futures::SinkExt;
+
+    Subscription::run(|| {
+        iced::stream::channel(
+            50,
+            |mut output: iced::futures::channel::mpsc::Sender<Message>| async move {
+                loop {
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+
+                    // Poll menu events from tray-icon
+                    while let Ok(event) = MenuEvent::receiver().try_recv() {
+                        let _ = output.send(Message::TrayEvent(event.id)).await;
+                    }
+                }
+            },
+        )
+    })
 }

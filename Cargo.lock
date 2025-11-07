@@ -2809,17 +2809,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc-foundation"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1add1b659e36c9607c7aab864a76c7a4c2760cd0cd2e120f3fb8b952c7e22bf9"
-dependencies = [
- "block",
- "objc",
- "objc_id",
-]
-
-[[package]]
 name = "objc-sys"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3179,15 +3168,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc_id"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c92d4ddb4bd7b50d730c215ff871754d0da6b2178849f8a2a2ab69712d0c073b"
-dependencies = [
- "objc",
-]
-
-[[package]]
 name = "object"
 version = "0.37.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3250,12 +3230,6 @@ checksum = "36820e9051aca1014ddc75770aab4d68bc1e9e632f0f5627c4086bc216fb583b"
 dependencies = [
  "ttf-parser 0.25.1",
 ]
-
-[[package]]
-name = "padlock"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c10569378a1dacd9f30dbe7ae49e054d2c45dc2f8ee49899903e09c3924e8b6f"
 
 [[package]]
 name = "pango"
@@ -4241,11 +4215,9 @@ dependencies = [
  "iced",
  "image",
  "lhm-client",
- "once_cell",
  "sysinfo",
  "tokio",
  "tray-icon",
- "tray-item",
  "windows 0.52.0",
  "wmi",
 ]
@@ -4542,22 +4514,6 @@ dependencies = [
  "once_cell",
  "png 0.17.16",
  "thiserror 1.0.69",
- "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "tray-item"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59d4bd406170690dc30eabb3badc67a085beaf9b2c3b1923afcc9c26a2191353"
-dependencies = [
- "cocoa",
- "core-graphics 0.23.2",
- "libc",
- "objc",
- "objc-foundation",
- "objc_id",
- "padlock",
  "windows-sys 0.52.0",
 ]
 
