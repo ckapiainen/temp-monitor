@@ -50,17 +50,25 @@ Section "MainSection" SEC01
 
     ; Check and install PawnIO driver
     DetailPrint "Checking for PawnIO driver..."
-    ReadRegStr $0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO" "DisplayName"
-    ${If} $0 == ""
-        DetailPrint "PawnIO not found, installing..."
-        ExecWait '"$INSTDIR\PawnIO_setup.exe"' $1
-        ${If} $1 == 0
-            DetailPrint "PawnIO installed successfully"
+    ; Check if the actual driver service exists (not just registry key)
+    ExecWait 'sc query PawnIO' $0
+    ${If} $0 != 0
+        ; Driver service not found, try alternate name
+        ExecWait 'sc query PawnIO3' $0
+        ${If} $0 != 0
+            ; Neither service found, install PawnIO
+            DetailPrint "PawnIO driver not found, installing..."
+            ExecWait '"$INSTDIR\PawnIO_setup.exe"' $1
+            ${If} $1 == 0
+                DetailPrint "PawnIO installed successfully"
+            ${Else}
+                DetailPrint "Warning: PawnIO installation returned code $1 (may require reboot)"
+            ${EndIf}
         ${Else}
-            DetailPrint "Warning: PawnIO installation returned code $1 (may require reboot)"
+            DetailPrint "PawnIO driver already loaded (PawnIO3)"
         ${EndIf}
     ${Else}
-        DetailPrint "PawnIO already installed: $0"
+        DetailPrint "PawnIO driver already loaded (PawnIO)"
     ${EndIf}
 
     ; Check and install LibreHardwareMonitor service
@@ -90,26 +98,26 @@ Section "MainSection" SEC01
     ; Create Start Menu shortcuts
     CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
     CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" \
-        "$INSTDIR\temp-monitor.exe" "" "$INSTDIR\logo.ico" 0
+        "$INSTDIR\temp-monitor.exe" "" "$INSTDIR\temp-monitor.exe" 0
     CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk" \
         "$INSTDIR\uninstall.exe"
 
     ; Create desktop shortcut
-    CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\temp-monitor.exe" "" "$INSTDIR\logo.ico" 0
+    CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\temp-monitor.exe" "" "$INSTDIR\temp-monitor.exe" 0
 
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
     ; Write registry keys for Add/Remove Programs
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+    WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
         "DisplayName" "${PRODUCT_NAME}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+    WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
         "UninstallString" "$INSTDIR\uninstall.exe"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
-        "DisplayIcon" "$INSTDIR\temp-monitor.exe"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+    WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+        "DisplayIcon" "$INSTDIR\temp-monitor.exe,0"
+    WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
         "Publisher" "${PRODUCT_PUBLISHER}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+    WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
         "DisplayVersion" "${PRODUCT_VERSION}"
 SectionEnd
 
@@ -135,5 +143,5 @@ skip_service:
     Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
 
     ; Remove registry keys
-    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
+    DeleteRegKey HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 SectionEnd
