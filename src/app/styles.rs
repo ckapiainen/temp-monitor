@@ -165,3 +165,52 @@ pub fn header_container_style(_theme: &Theme) -> container::Style {
         snap: false,
     }
 }
+
+pub fn header_button_style(_theme: &Theme, status: button::Status) -> button::Style {
+    match status {
+        button::Status::Active => button::Style {
+            background: Some(Background::Color(iced::Color::TRANSPARENT)),
+            border: iced::Border {
+                color: iced::Color::TRANSPARENT,
+                width: 0.0,
+                radius: iced::border::Radius::from(8.0),
+            },
+            text_color: iced::Color::from_rgb(0.85, 0.85, 0.85),
+            shadow: iced::Shadow::default(),
+            snap: false,
+        },
+        button::Status::Hovered => button::Style {
+            background: Some(Background::Color(iced::Color::from_rgba(0.3, 0.3, 0.35, 0.3))),
+            border: iced::Border {
+                color: iced::Color::TRANSPARENT,
+                width: 0.0,
+                radius: iced::border::Radius::from(8.0),
+            },
+            text_color: iced::Color::WHITE,
+            shadow: iced::Shadow::default(),
+            snap: false,
+        },
+        button::Status::Pressed => button::Style {
+            background: Some(Background::Color(iced::Color::from_rgba(0.2, 0.2, 0.25, 0.4))),
+            border: iced::Border {
+                color: iced::Color::TRANSPARENT,
+                width: 0.0,
+                radius: iced::border::Radius::from(8.0),
+            },
+            text_color: iced::Color::from_rgb(0.75, 0.75, 0.75),
+            shadow: iced::Shadow::default(),
+            snap: false,
+        },
+        button::Status::Disabled => button::Style {
+            background: Some(Background::Color(iced::Color::TRANSPARENT)),
+            border: iced::Border {
+                color: iced::Color::TRANSPARENT,
+                width: 0.0,
+                radius: iced::border::Radius::from(8.0),
+            },
+            text_color: iced::Color::from_rgb(0.4, 0.4, 0.4),
+            shadow: iced::Shadow::default(),
+            snap: false,
+        },
+    }
+}

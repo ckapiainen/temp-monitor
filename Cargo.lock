@@ -4215,6 +4215,7 @@ dependencies = [
  "iced",
  "image",
  "lhm-client",
+ "lilt",
  "sysinfo",
  "tokio",
  "tray-icon",

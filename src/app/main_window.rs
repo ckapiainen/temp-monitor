@@ -1,7 +1,9 @@
 use crate::app::styles;
 use crate::collectors::cpu_collector::CpuData;
 use iced::widget::{button, center, column, container, progress_bar, rich_text, row, rule, span, text, Row};
-use iced::{font, never, Center, Element, Fill, Font, Padding};
+use iced::{font, never, Center, Element, Fill, Font, Padding, Subscription, window};
+use lilt::{Animated, Easing};
+use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BarChartState {
@@ -13,16 +15,30 @@ pub enum BarChartState {
 pub enum Message {
     UsageButtonPressed,
     PowerButtonPressed,
+    // Animation triggers
+    ToggleGeneralInfo,
+    ToggleCoresCard,
+    Tick, // Frame update (REQUIRED for animations)
 }
 
 pub struct MainWindow {
     bar_chart_state: BarChartState,
+    general_info_expanded: Animated<f32, Instant>,
+    cores_card_expanded: Animated<f32, Instant>,
+    now: Instant,
 }
 
 impl MainWindow {
     pub fn new() -> Self {
         Self {
             bar_chart_state: BarChartState::Usage,
+            general_info_expanded: Animated::new(1.0)
+                .duration(400.0)
+                .easing(Easing::EaseInOut),
+            cores_card_expanded: Animated::new(1.0)
+                .duration(400.0)
+                .easing(Easing::EaseInOut),
+            now: Instant::now(),
         }
     }
 
@@ -34,88 +50,153 @@ impl MainWindow {
             Message::PowerButtonPressed => {
                 self.bar_chart_state = BarChartState::Power;
             }
+            Message::ToggleGeneralInfo => {
+                // 0.0 Collapsed, 1.0 Expanded
+                let new_value = if self.general_info_expanded.value > 0.5 { 0.0 } else { 1.0 };
+                // Start the transition
+                self.general_info_expanded.transition(new_value, Instant::now());
+            }
+            Message::ToggleCoresCard => {
+                let new_value = if self.cores_card_expanded.value > 0.5 { 0.0 } else { 1.0 };
+                self.cores_card_expanded.transition(new_value, Instant::now());
+            }
+            Message::Tick => {
+                // Update current time on each frame
+                self.now = Instant::now();
+            }
+        }
+    }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        // Only subscribe to frames when animations are active
+        if self.general_info_expanded.in_progress(self.now)
+            || self.cores_card_expanded.in_progress(self.now) {
+            window::frames().map(|_| Message::Tick)
+        } else {
+            Subscription::none()
         }
     }
 
     pub fn view<'a>(&self, cpu_data: &'a CpuData) -> Element<'a, Message> {
     let core_usage_vector = &cpu_data.core_utilization;
     let core_power_draw_vector = &cpu_data.core_power_draw;
-    let heading = rich_text([
-        span("CPU:").font(Font {
-            weight: font::Weight::Bold,
-            ..Font::default()
-        }),
-        span("  "),
-        span(&cpu_data.cpu_name).font(Font {
-            weight: font::Weight::Bold,
-            ..Font::default()
-        }),
-    ])
-    .on_link_click(never)
-    .size(17);
-
-    let heading = row![heading]
-        .padding(Padding {
-            top: 10.0,
-            right: 0.0,
-            bottom: 0.0,
-            left: 10.0,
-        })
-        .width(Fill);
-
     /*
     General CPU info card
     */
-    let total_load = column![
-        text("LOAD").size(20),
-        text(format!("{:.2}%", cpu_data.cpu_usage)).size(55)
-    ]
-    .align_x(Center)
-    .width(150);
 
-    let temp = rich_text![
-        span("TEMP\n").size(20),
-        span(format!("{:.1}", cpu_data.cpu_temp)).size(55),
-        span(" \u{00B0}").size(38).font(Font {
-            weight: font::Weight::Light,
-            ..Font::default()
-        }),
-        span("C")
-            .font(Font {
+    // Animate height between collapsed (50px) and expanded (210px)
+    // 1.0 = expanded, 0.0 = collapsed
+    let animation_factor = self.general_info_expanded.animate(std::convert::identity, self.now);
+    let general_card_height = 50.0 + (animation_factor * (210.0 - 50.0));
+    let is_general_expanded = self.general_info_expanded.value > 0.5;
+
+
+    // Clickable header
+    let general_header_button = button(
+        row![
+            rich_text([
+                span("CPU: ").font(Font {
+                    weight: font::Weight::Bold,
+                    ..Font::default()
+                }),
+                span(&cpu_data.cpu_name).font(Font {
+                    weight: font::Weight::Bold,
+                    ..Font::default()
+                }),
+            ])
+            .on_link_click(never)
+            .size(17),
+        ]
+        .spacing(10)
+        .align_y(Center)
+        .padding(Padding {
+            top: 10.0,
+            right: 10.0,
+            bottom: 10.0,
+            left: 10.0,
+        })
+    )
+    .on_press(Message::ToggleGeneralInfo)
+    .width(Fill)
+    .style(styles::header_button_style);
+
+    let general_content = if is_general_expanded {
+        // Expanded view - show full stats
+        let total_load = column![
+            text("LOAD").size(20),
+            text(format!("{:.2}%", cpu_data.cpu_usage)).size(55)
+        ]
+        .align_x(Center)
+        .width(150);
+
+        let temp = rich_text![
+            span("TEMP\n").size(20),
+            span(format!("{:.1}", cpu_data.cpu_temp)).size(55),
+            span(" \u{00B0}").size(38).font(Font {
                 weight: font::Weight::Light,
                 ..Font::default()
-            })
-            .size(35),
-    ]
-    .align_x(Center)
-    .on_link_click(never)
-    .width(170);
-
-    let clock_speed = column![
-        text("CLOCK SPEED").size(20),
-        text(format!("{:.0} MHz", cpu_data.current_frequency * 1000.0)).size(55)
-    ]
-    .align_x(Center);
-
-    let stats_row = row![
-        total_load,
-        rule::vertical(1),
-        temp,
-        rule::vertical(1),
-        clock_speed
-    ]
-    .spacing(25)
-    .padding(Padding {
-        top: 0.0,
-        right: 0.0,
-        bottom: 10.0,
-        left: 0.0,
-    });
-    let content = column![heading, rule::horizontal(1), stats_row]
+            }),
+            span("C")
+                .font(Font {
+                    weight: font::Weight::Light,
+                    ..Font::default()
+                })
+                .size(35),
+        ]
         .align_x(Center)
-        .spacing(15);
-    let general_cpu_info_card = center(content)
-        .height(210)
+        .on_link_click(never)
+        .width(170);
+
+        let clock_speed = column![
+            text("CLOCK SPEED").size(20),
+            text(format!("{:.0} MHz", cpu_data.current_frequency * 1000.0)).size(55)
+        ]
+        .align_x(Center);
+
+        let stats_row = row![
+            total_load,
+            rule::vertical(1),
+            temp,
+            rule::vertical(1),
+            clock_speed
+        ]
+        .spacing(25)
+        .padding(Padding {
+            top: 0.0,
+            right: 0.0,
+            bottom: 10.0,
+            left: 0.0,
+        });
+
+        column![general_header_button, rule::horizontal(1), stats_row]
+            .align_x(Center)
+            .spacing(15)
+    } else {
+        // Collapsed view - show header with key metrics in one line
+        let collapsed_info = row![
+            text(format!("{}°C", cpu_data.cpu_temp as i32)).size(16),
+            text("|").size(16),
+            text(format!("{:.1}%", cpu_data.cpu_usage)).size(16),
+        ]
+        .spacing(10)
+        .padding(Padding {
+            top: 10.0,
+            right: 10.0,
+            bottom: 10.0,
+            left: 10.0,
+        });
+
+        column![
+            row![
+                general_header_button,
+                collapsed_info,
+            ]
+            .width(Fill)
+        ]
+    };
+
+    let general_cpu_info_card = center(general_content)
+        .height(general_card_height)
         .style(styles::card_container_style)
         .clip(true);
 
@@ -195,8 +276,17 @@ impl MainWindow {
     let core_usage_row = Row::with_children(usage_bar_chart).spacing(1);
     let core_power_row = Row::with_children(power_bar_chart).spacing(1);
 
+    /*
+      Cores card with collapse functionality
+    */
 
-    // Core card
+    // Animate height between collapsed (50px) and expanded (280px)
+    // 1.0 = expanded, 0.0 = collapsed
+    let cores_animation_factor = self.cores_card_expanded.animate(std::convert::identity, self.now);
+    let cores_card_height = 50.0 + (cores_animation_factor * (280.0 - 50.0));
+    let is_cores_expanded = self.cores_card_expanded.value > 0.5;
+
+    // U/P toggle buttons (always visible)
     let usage_button = button(
         container(text("U").size(11))
             .align_x(Center)
@@ -223,36 +313,72 @@ impl MainWindow {
 
     let button_group = row![usage_button, power_button].spacing(5);
 
-    let header_text = container(text("CORE USAGE").size(15).font(Font {
-        weight: font::Weight::Bold,
-        ..Font::default()
-    }))
-    .width(Fill)
-    .align_x(Center);
-
-    let header_row = row![header_text, button_group]
-        .align_y(Center)
+    // Clickable header with chevron
+    let cores_header_button = button(
+        row![
+            text("CORES").size(15).font(Font {
+                weight: font::Weight::Bold,
+                ..Font::default()
+            }),
+        ]
         .spacing(10)
-        .width(Fill);
+        .align_y(Center)
+    )
+    .on_press(Message::ToggleCoresCard)
+    .style(styles::header_button_style);
 
-    let cores_card_content = column![
-        header_row,
-        rule::horizontal(1),
-        match self.bar_chart_state {
-            BarChartState::Usage => core_usage_row,
-            BarChartState::Power => core_power_row,
-        }
-    ]
-    .align_x(Center)
-    .spacing(10)
-    .padding(10);
+    let cores_card_content = if is_cores_expanded {
+        // Expanded view - show full progress bars
+        let header_row = row![cores_header_button, container(button_group).width(Fill).align_x(Center)]
+            .align_y(Center)
+            .spacing(10)
+            .width(Fill);
+
+        column![
+            header_row,
+            rule::horizontal(1),
+            match self.bar_chart_state {
+                BarChartState::Usage => core_usage_row,
+                BarChartState::Power => core_power_row,
+            }
+        ]
+        .align_x(Center)
+        .spacing(10)
+        .padding(10)
+    } else {
+        // Collapsed view - show summary with buttons
+        let mode_text = match self.bar_chart_state {
+            BarChartState::Usage => "Usage",
+            BarChartState::Power => "Power",
+        };
+
+        let collapsed_info = row![
+            text(format!("{} cores", core_usage_vector.len())).size(14),
+            text("|").size(14),
+            text(mode_text).size(14),
+        ]
+        .spacing(10);
+
+        column![
+            row![
+                cores_header_button,
+                collapsed_info,
+                container(button_group).width(Fill).align_x(iced::alignment::Horizontal::Right),
+            ]
+            .align_y(Center)
+            .spacing(10)
+            .width(Fill)
+        ]
+        .padding(10)
+    };
 
     let cores_card = container(cores_card_content)
         .width(Fill)
-        .height(280)
+        .height(cores_card_height)
         .align_x(Center)
         .align_y(Center)
-        .style(styles::card_container_style);
+        .style(styles::card_container_style)
+        .clip(true);
 
     let all_cards = column![general_cpu_info_card, cores_card].spacing(20);
     container(all_cards).padding(20).width(Fill).into()

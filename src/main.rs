@@ -320,6 +320,7 @@ impl App {
             window::close_events().map(Message::WindowClosed),
             iced::time::every(Duration::from_secs(1)).map(|_| Message::UpdateHardwareData),
             tray_events_subscription(),
+            self.main_window.subscription().map(Message::MainWindow),
         ])
     }
 }
