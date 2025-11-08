@@ -7,7 +7,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "image"] }
+iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "image", "svg"] }
 tokio = { version = "=1.45.1", features = ["rt", "time", "fs", "macros"] }
 colored = "3.0.0"
 tray-icon = "0.14.3"

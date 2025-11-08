@@ -8,7 +8,7 @@ use crate::collectors::CoreStats;
 use app::{layout, main_window};
 use colored::Colorize;
 use iced::widget::container;
-use iced::{window, Element, Program, Subscription, Task, Theme};
+use iced::{window, Element, Subscription, Task, Theme};
 use lhm_client::service::is_service_installed;
 use lhm_client::{ComputerOptions, LHMClient};
 use std::time::Duration;
@@ -135,7 +135,7 @@ impl App {
 
     fn new() -> (Self, Task<Message>) {
         let window_settings = window::Settings {
-            size: iced::Size::new(950.0, 600.0),
+            size: iced::Size::new(950.0, 650.0),
             position: window::Position::Centered,
             min_size: Some(iced::Size::new(500.0, 400.0)),
             icon: window::icon::from_file("assets/logo.ico").ok(),
@@ -184,6 +184,7 @@ impl App {
         let connect_task = Task::future(async {
             Message::HardwareMonitorConnected(connect_to_lhwm_service().await)
         });
+
         (
             Self {
                 window_id: None,
@@ -192,7 +193,7 @@ impl App {
                 system,
                 current_screen: Screen::Main,
                 app_screen: Screen::Main,
-                current_theme: Theme::GruvboxDark,
+                current_theme: Theme::Dracula,
                 main_window: main_window::MainWindow::new(),
                 tray_icon,
                 show_menu_id: show_id,
@@ -236,7 +237,7 @@ impl App {
                     // If window is closed, reopen it
                     if self.window_id.is_none() {
                         let window_settings = window::Settings {
-                            size: iced::Size::new(950.0, 600.0),
+                            size: iced::Size::new(950.0, 650.0),
                             position: window::Position::Centered,
                             min_size: Some(iced::Size::new(500.0, 400.0)),
                             icon: window::icon::from_file("assets/logo.ico").ok(),
@@ -311,7 +312,7 @@ impl App {
             Screen::Settings => container("").into(),
         };
 
-        layout::with_header(page, &self.current_theme, &self.current_screen)
+        layout::with_header(page, &self.current_screen)
     }
 
     fn subscription(&self) -> Subscription<Message> {

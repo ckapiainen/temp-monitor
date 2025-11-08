@@ -147,7 +147,7 @@ pub fn header_container_style(_theme: &Theme) -> container::Style {
     container::Style {
         background: Some(Background::Color(iced::Color::from_rgb(0.18, 0.18, 0.19))),
         border: iced::Border {
-            color: iced::Color::from_rgba(0.4, 0.4, 0.45, 0.5),
+            color: iced::Color::TRANSPARENT,
             width: 2.0,
             radius: iced::border::Radius {
                 top_left: 0.0,

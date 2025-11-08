@@ -1,48 +1,65 @@
 use crate::{Message, Screen};
 use crate::app::styles;
-use iced::widget::{button, column, container, pick_list, row};
+use iced::widget::{button, column, container, pick_list, row, svg};
 use iced::{Center, Element, Fill, Theme};
 
 /// Render the app with header
 pub fn with_header<'a>(
                          content: Element<'a, Message>,
-                         current_theme: &'a Theme,
-                         current_screen: &Screen,
+                         _current_screen: &Screen,
 ) -> Element<'a, Message> {
-    let main_page_button = button("Main")
-        .on_press(Message::MainButtonPressed)
-        .padding([8, 16])
-        .style(styles::rounded_button_style);
-
-    let plotter_page = button("Plotter")
-        .on_press(Message::PlotterButtonPressed)
-        .padding([8, 16])
-        .style(styles::rounded_button_style);
-
-    let settings_page = button("Settings")
-        .on_press(Message::SettingsButtonPressed)
-        .padding([8, 16])
-        .style(styles::rounded_button_style);
-
-    let theme_picker = pick_list(
-        Theme::ALL,
-        Some(current_theme),
-        Message::ThemeChanged,
+    let main_page_button = button(
+        container(
+            svg(svg::Handle::from_path("assets/icons/menu.svg"))
+                .width(30)
+                .height(30)
+        )
+        .align_x(Center)
+        .align_y(Center)
+        .width(35)
+        .height(35)
     )
-        .placeholder("Choose theme")
-        .text_size(15)
-        .width(150);
+        .on_press(Message::MainButtonPressed)
+        .style(styles::rounded_button_style);
+
+    let plotter_page = button(
+        container(
+            svg(svg::Handle::from_path("assets/icons/chart-spline.svg"))
+                .width(30)
+                .height(30)
+        )
+        .align_x(Center)
+        .align_y(Center)
+        .width(35)
+        .height(35)
+    )
+        .on_press(Message::PlotterButtonPressed)
+        .style(styles::rounded_button_style);
+
+    let settings_page = button(
+        container(
+            svg(svg::Handle::from_path("assets/icons/settings.svg"))
+                .width(30)
+                .height(30)
+        )
+        .align_x(Center)
+        .align_y(Center)
+        .width(35)
+        .height(35)
+    )
+        .on_press(Message::SettingsButtonPressed)
+        .style(styles::rounded_button_style);
 
     let header = container(
-        row![main_page_button, plotter_page, settings_page, theme_picker]
+        row![main_page_button, plotter_page, settings_page]
             .align_y(Center)
-            .spacing(12),
+            .spacing(8),
     )
         .padding(10)
         .align_x(Center)
         .align_y(Center)
         .style(styles::header_container_style)
-        .width(500);
+        .width(250);
 
     // center the header horizontally at top
     let header_wrapper = container(header)
