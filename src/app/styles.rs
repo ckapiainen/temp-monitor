@@ -214,3 +214,21 @@ pub fn header_button_style(_theme: &Theme, status: button::Status) -> button::St
         },
     }
 }
+
+pub fn modal_generic(_theme: &Theme) -> container::Style {
+    container::Style {
+        background: Some(Background::Color(iced::Color::from_rgb(0.18, 0.18, 0.19))),
+        border: iced::Border {
+            color: iced::Color::from_rgba(0.4, 0.4, 0.45, 0.5),
+            width: 2.0,
+            radius: iced::border::Radius::from(10.0),
+        },
+        shadow: iced::Shadow {
+            color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.4),
+            offset: iced::Vector::new(0.0, 2.0),
+            blur_radius: 8.0,
+        },
+        text_color: None,
+        snap: false,
+    }
+}

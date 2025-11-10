@@ -322,9 +322,9 @@ impl App {
             Screen::Settings => container("").into(),
         };
         if self.show_modal {
-            modal::settings_view(page, self.show_modal)
+            modal::settings_view(layout::with_header(page))
         } else {
-            layout::with_header(page, &self.current_screen)
+            layout::with_header(page)
         }
     }
 

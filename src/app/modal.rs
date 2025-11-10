@@ -1,3 +1,4 @@
+use crate::app::{layout, styles};
 use crate::Message;
 use iced::widget::{button, center, column, container, mouse_area, opaque, stack, text};
 use iced::{Color, Element};
@@ -12,34 +13,36 @@ fn modal<'a, Message: Clone>(
 where
     Message: Clone + 'a,
 {
-    let backdrop = mouse_area(center(opaque(content)).style(|_theme| {
-        container::Style {
-            background: Some(
-                Color {
-                    a: 0.7,
-                    ..Color::BLACK
+    let background_layer = mouse_area(
+        container(center(opaque(content)))
+            .width(iced::Fill)
+            .height(iced::Fill)
+            .style(|_theme| {
+                // Background styling
+                container::Style {
+                    background: Some(
+                        Color {
+                            a: 0.7,
+                            ..Color::BLACK
+                        }
+                        .into(),
+                    ),
+                    ..container::Style::default()
                 }
-                .into(),
-            ),
-            ..container::Style::default()
-        }
-    }));
+            })
+    );
 
     let backdrop = if close_with_background_click {
-        backdrop.on_press(hide_modal)
+        opaque(background_layer.on_press(hide_modal))
     } else {
-        backdrop
+        opaque(background_layer)
     };
 
     stack![base.into(), backdrop].into()
 }
-pub fn settings_view<'a>(
-    base: impl Into<Element<'a, Message>>,
-    show_modal: bool,
-) -> Element<'a, Message> {
-    if !show_modal {
-        return base.into();
-    }
+pub fn settings_view(
+    base: Element<Message>,
+) -> Element<Message> {
 
     // Settings modal content
     let modal_content = container(column![
@@ -47,7 +50,8 @@ pub fn settings_view<'a>(
         button(text("Exit")).on_press(Message::HideSettingsModal),
     ])
     .padding(20)
-    .style(container::rounded_box);
-
+    .width(350)
+    .height(350)
+    .style(styles::modal_generic);
     modal(base, modal_content, Message::HideSettingsModal, false)
 }
