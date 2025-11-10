@@ -5,7 +5,7 @@ mod collectors;
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
 use crate::collectors::CoreStats;
-use app::{layout, main_window};
+use app::{layout, main_window, modal};
 use colored::Colorize;
 use iced::widget::container;
 use iced::{window, Element, Subscription, Task, Theme};
@@ -13,7 +13,10 @@ use lhm_client::service::is_service_installed;
 use lhm_client::{ComputerOptions, LHMClient};
 use std::time::Duration;
 use sysinfo::System;
-use tray_icon::{menu::{Menu, MenuItem,PredefinedMenuItem, MenuEvent, MenuId}, Icon, TrayIconBuilder};
+use tray_icon::{
+    menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
+    Icon, TrayIconBuilder,
+};
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -87,10 +90,11 @@ enum Message {
     WindowOpened(window::Id),
     WindowClosed(window::Id),
     TrayEvent(MenuId),
+    ShowSettingsModal,
+    HideSettingsModal,
     ThemeChanged(Theme),
     MainButtonPressed,
     PlotterButtonPressed,
-    SettingsButtonPressed,
     UpdateHardwareData,
     CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
     MainWindow(main_window::Message),
@@ -110,6 +114,7 @@ struct App {
     system: System,
     current_screen: Screen,
     app_screen: Screen,
+    show_modal: bool,
     current_theme: Theme,
     main_window: main_window::MainWindow,
     tray_icon: tray_icon::TrayIcon,
@@ -119,13 +124,11 @@ struct App {
 
 impl App {
     /// Update tray tooltip with live hw data
-   // TODO: Change icon color based on temperature
+    // TODO: Change icon color based on temperature
     fn update_tray_tooltip(&self) {
         let tooltip = format!(
             "CPU: {:.0}°C ({:.0}%)\nPower: {:.1}W",
-            self.cpu_data.cpu_temp,
-            self.cpu_data.cpu_usage,
-            self.cpu_data.total_power_draw
+            self.cpu_data.cpu_temp, self.cpu_data.cpu_usage, self.cpu_data.total_power_draw
         );
 
         if let Err(e) = self.tray_icon.set_tooltip(Some(&tooltip)) {
@@ -154,7 +157,7 @@ impl App {
             .into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();
-        let icon=Icon::from_rgba(rgba, width, height).expect("Failed to create icon");
+        let icon = Icon::from_rgba(rgba, width, height).expect("Failed to create icon");
         // Create tray menu
         let menu = Menu::new();
         let show_item = MenuItem::new("Show Window", true, None);
@@ -193,6 +196,7 @@ impl App {
                 system,
                 current_screen: Screen::Main,
                 app_screen: Screen::Main,
+                show_modal: false,
                 current_theme: Theme::Dracula,
                 main_window: main_window::MainWindow::new(),
                 tray_icon,
@@ -260,10 +264,16 @@ impl App {
                 self.current_theme = theme;
                 Task::none()
             }
-            Message::MainButtonPressed
-            | Message::PlotterButtonPressed
-            | Message::SettingsButtonPressed => {
+            Message::MainButtonPressed | Message::PlotterButtonPressed => {
                 println!("Button pressed");
+                Task::none()
+            }
+            Message::ShowSettingsModal => {
+                self.show_modal = true;
+                Task::none()
+            }
+            Message::HideSettingsModal => {
+                self.show_modal = false;
                 Task::none()
             }
             Message::MainWindow(msg) => {
@@ -311,8 +321,11 @@ impl App {
             Screen::Plotter => container("").into(),
             Screen::Settings => container("").into(),
         };
-
-        layout::with_header(page, &self.current_screen)
+        if self.show_modal {
+            modal::settings_view(page, self.show_modal)
+        } else {
+            layout::with_header(page, &self.current_screen)
+        }
     }
 
     fn subscription(&self) -> Subscription<Message> {

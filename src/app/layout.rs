@@ -47,7 +47,7 @@ pub fn with_header<'a>(
         .width(35)
         .height(35)
     )
-        .on_press(Message::SettingsButtonPressed)
+        .on_press(Message::ShowSettingsModal)
         .style(styles::rounded_button_style);
 
     let header = container(
