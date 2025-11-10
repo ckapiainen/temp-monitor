@@ -94,12 +94,12 @@ impl MainWindow {
         General CPU info card
         */
 
-        // Animate height between collapsed (50px) and expanded (210px)
+        // Animate height between collapsed (50px) and expanded (260px)
         // 1.0 = expanded, 0.0 = collapsed
         let animation_factor = self
             .general_info_expanded
             .animate(std::convert::identity, self.now);
-        let general_card_height = 50.0 + (animation_factor * (210.0 - 50.0));
+        let general_card_height = 50.0 + (animation_factor * (260.0 - 50.0));
         let is_general_expanded = self.general_info_expanded.value > 0.5;
 
         // Clickable header
@@ -108,58 +108,85 @@ impl MainWindow {
                 svg(svg::Handle::from_path("assets/icons/cpu.svg"))
                     .width(25)
                     .height(25),
-                rich_text([span(&cpu_data.cpu_name).font(Font {
+                rich_text([span(&cpu_data.name).font(Font {
                     weight: font::Weight::Bold,
                     ..Font::default()
                 }),])
                 .on_link_click(never)
                 .size(17),
             ]
-            .spacing(10)
-            .align_y(Center)
-            .padding(Padding {
-                top: 10.0,
-                right: 10.0,
-                bottom: 0.0,
-                left: 10.0,
-            }),
+                .spacing(10)
+                .align_y(Center)
+                .padding(Padding {
+                    top: 10.0,
+                    right: 10.0,
+                    bottom: 0.0,
+                    left: 10.0,
+                }),
         )
-        .on_press(Message::ToggleGeneralInfo)
-        .width(Fill)
-        .style(styles::header_button_style);
+            .on_press(Message::ToggleGeneralInfo)
+            .width(Fill)
+            .style(styles::header_button_style);
 
         let general_content = if is_general_expanded {
             // Expanded view - show full stats
             let total_load = column![
                 text("LOAD").size(20),
-                text(format!("{:.2}%", cpu_data.cpu_usage)).size(55)
+                text(format!("{:.2}%", cpu_data.usage)).size(55),
+                row![
+                    text(format!("L: {:.2}%", cpu_data.usage_low))
+                        .size(20),
+                    text(" | ").size(20),
+                    text(format!("H: {:.2}%", cpu_data.usage_high))
+                        .size(20),
+                ]
+                .spacing(5)
             ]
-            .align_x(Center)
-            .width(150);
+                .align_x(Center)
+                .width(195);
 
-            let temp = rich_text![
-                span("TEMP\n").size(20),
-                span(format!("{:.1}", cpu_data.cpu_temp)).size(55),
-                span(" \u{00B0}").size(38).font(Font {
-                    weight: font::Weight::Light,
-                    ..Font::default()
-                }),
-                span("C")
-                    .font(Font {
+            let temp = column![
+                text("TEMP").size(20),
+                rich_text![
+                    span(format!("{:.1}", cpu_data.temp)).size(55),
+                    span(" \u{00B0}").size(38).font(Font {
                         weight: font::Weight::Light,
                         ..Font::default()
-                    })
-                    .size(35),
+                    }),
+                    span("C")
+                        .font(Font {
+                            weight: font::Weight::Light,
+                            ..Font::default()
+                        })
+                        .size(35),
+                ]
+                .on_link_click(never),
+                row![
+                    text(format!("L: {:.2}°C", cpu_data.temp_low))
+                        .size(20),
+                    text(" | ").size(20),
+                    text(format!("H: {:.2}°C", cpu_data.temp_high))
+                        .size(20),
+                ]
+                .spacing(5)
             ]
-            .align_x(Center)
-            .on_link_click(never)
-            .width(170);
+                .align_x(Center)
+                .width(215);
 
             let clock_speed = column![
-                text("CLOCK SPEED").size(20),
-                text(format!("{:.0} MHz", cpu_data.current_frequency * 1000.0)).size(55)
+                text("CLOCK SPEED").size(18),
+                text(format!("{:.0} MHz", cpu_data.current_frequency * 1000.0)).size(38),
+                container(rule::horizontal(1)).padding(Padding {
+                    top: 8.0,
+                    right: 0.0,
+                    bottom: 8.0,
+                    left: 0.0,
+                }),
+                text("PACKAGE POWER").size(18),
+                text(format!("{:.1} W", cpu_data.total_power_draw)).size(38)
             ]
-            .align_x(Center);
+                .align_x(Center)
+                .width(190);
 
             let stats_row = row![
                 total_load,
@@ -168,13 +195,14 @@ impl MainWindow {
                 rule::vertical(1),
                 clock_speed
             ]
-            .spacing(25)
-            .padding(Padding {
-                top: 0.0,
-                right: 0.0,
-                bottom: 10.0,
-                left: 0.0,
-            });
+                .spacing(25)
+                .align_y(Center)
+                .padding(Padding {
+                    top: 0.0,
+                    right: 0.0,
+                    bottom: 10.0,
+                    left: 0.0,
+                });
 
             column![general_header_button, rule::horizontal(1), stats_row]
                 .align_x(Center)
@@ -182,22 +210,21 @@ impl MainWindow {
         } else {
             // Collapsed view - show header with key metrics in one line
             let collapsed_info = row![
-                text(format!("{}°C", cpu_data.cpu_temp as i32))
-                    .size(25)
-                    .align_y(Center),
+                text(format!("{}°C", cpu_data.temp as i32))
+                    .size(25),
                 text("|").size(25),
-                text(format!("{:.1}%", cpu_data.cpu_usage)).size(25),
+                text(format!("{:.1}%", cpu_data.usage)).size(25),
             ]
-            .spacing(10)
+                .spacing(10)
                 .align_y(Center)
-            .padding(Padding {
-                top: 10.0,
-                right: 10.0,
-                bottom: 10.0,
-                left: 10.0,
-            });
+                .padding(Padding {
+                    top: 10.0,
+                    right: 10.0,
+                    bottom: 10.0,
+                    left: 10.0,
+                });
 
-            column![row![general_header_button, collapsed_info,].width(Fill)]
+            column![row![general_header_button, collapsed_info,].width(Fill).align_y(Center)]
         };
 
         let general_cpu_info_card = container(general_content)
@@ -217,7 +244,7 @@ impl MainWindow {
             let utilization = progress_bar(0.0..=100.0, core.value)
                 .vertical()
                 .length(150)
-                .girth(35);
+                .girth(28);
 
             let name_util_val = rich_text![
                 span(format!("{:.2}%\n", core.value))
@@ -233,9 +260,9 @@ impl MainWindow {
                     })
                     .size(15),
             ]
-            .on_link_click(never)
-            .align_x(Center)
-            .width(70);
+                .on_link_click(never)
+                .align_x(Center)
+                .width(55);
             let core_col = column![utilization, name_util_val].align_x(Center);
             usage_bar_chart.push(core_col.into());
 
@@ -253,7 +280,7 @@ impl MainWindow {
             let wattage_bar = progress_bar(0.0..=20.0, core.value)
                 .vertical()
                 .length(150)
-                .girth(35);
+                .girth(28);
 
             let name_util_val = rich_text![
                 span(format!("{:.2}W\n", core.value))
@@ -269,9 +296,9 @@ impl MainWindow {
                     })
                     .size(15),
             ]
-            .on_link_click(never)
-            .align_x(Center)
-            .width(70);
+                .on_link_click(never)
+                .align_x(Center)
+                .width(55);
             let core_col = column![wattage_bar, name_util_val].align_x(Center);
             power_bar_chart.push(core_col.into());
 
@@ -303,10 +330,10 @@ impl MainWindow {
                     .width(25)
                     .height(25)
             )
-            .align_x(Center)
-            .align_y(Center)
-            .width(25)
-            .height(25)
+                .align_x(Center)
+                .align_y(Center)
+                .width(25)
+                .height(25)
         )
             .on_press(Message::UsageButtonPressed)
             .style(styles::compact_icon_button_style);
@@ -317,10 +344,10 @@ impl MainWindow {
                     .width(25)
                     .height(25)
             )
-            .align_x(Center)
-            .align_y(Center)
-            .width(25)
-            .height(25)
+                .align_x(Center)
+                .align_y(Center)
+                .width(25)
+                .height(25)
         )
             .on_press(Message::PowerButtonPressed)
             .style(styles::compact_icon_button_style);
@@ -332,9 +359,9 @@ impl MainWindow {
                 ..Font::default()
             }),
         )
-        .on_press(Message::ToggleCoresCard)
+            .on_press(Message::ToggleCoresCard)
             .width(Fill)
-        .style(styles::header_button_style);
+            .style(styles::header_button_style);
 
         let cores_card_content = if is_cores_expanded {
             // Expanded view - show full progress bars
@@ -355,9 +382,9 @@ impl MainWindow {
                     BarChartState::Power => core_power_row,
                 }
             ]
-            .align_x(Center)
-            .spacing(10)
-            .padding(10)
+                .align_x(Center)
+                .spacing(10)
+                .padding(10)
         } else {
             // Collapsed view - show summary with buttons
             let mode_text = match self.bar_chart_state {
@@ -370,7 +397,7 @@ impl MainWindow {
                 text("|").size(14),
                 text(mode_text).size(14),
             ]
-            .spacing(10);
+                .spacing(10);
 
             column![row![
                 cores_header_button,
@@ -381,7 +408,7 @@ impl MainWindow {
                 .align_y(Center)
                 .spacing(8)
                 .width(Fill)]
-            .padding(10)
+                .padding(10)
         };
 
         let cores_card = container(cores_card_content)

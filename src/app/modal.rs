@@ -1,7 +1,31 @@
-use crate::app::{layout, styles};
-use crate::Message;
-use iced::widget::{button, center, column, container, mouse_area, opaque, stack, text};
-use iced::{Color, Element};
+use crate::app::styles;
+use crate::{Message};
+use iced::widget::{
+    button, center, column, container, mouse_area, opaque, pick_list, row, rule, stack, text,
+    text_input,
+};
+use iced::{Alignment, Color, Element, Length, Theme};
+
+#[derive(Clone)]
+pub struct Settings {
+    pub theme: Theme,
+    pub temp_low_threshold: f32,
+    pub temp_high_threshold: f32,
+    pub temp_low_input: String,
+    pub temp_high_input: String,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme: Theme::Dracula,
+            temp_low_threshold: 60.0,
+            temp_high_threshold: 80.0,
+            temp_low_input: "60".to_string(),
+            temp_high_input: "80".to_string(),
+        }
+    }
+}
 
 /// Generic modal with a semi-transparent background and centered content
 fn modal<'a, Message: Clone>(
@@ -25,11 +49,11 @@ where
                             a: 0.7,
                             ..Color::BLACK
                         }
-                        .into(),
+                            .into(),
                     ),
                     ..container::Style::default()
                 }
-            })
+            }),
     );
 
     let backdrop = if close_with_background_click {
@@ -40,18 +64,136 @@ where
 
     stack![base.into(), backdrop].into()
 }
-pub fn settings_view(
-    base: Element<Message>,
-) -> Element<Message> {
 
-    // Settings modal content
-    let modal_content = container(column![
-        text("Settings").size(24),
-        button(text("Exit")).on_press(Message::HideSettingsModal),
-    ])
-    .padding(20)
-    .width(350)
-    .height(350)
-    .style(styles::modal_generic);
+
+// TODO: More settings
+// Update interval picker (0.5s, 1s, 2s, 5s)
+// Startup Behavior:
+// "Start with Windows" checkbox
+// "Start minimized to tray" checkbox
+// Temperature Units
+// Tray icon settings:
+// "Show temperature" checkbox
+// "Show CPU usage" checkbox
+// "Show power draw" checkbox
+
+pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a Settings) -> Element<'a, Message> {
+    // Header with title and close button
+    let header = container(
+        row![
+            text("Settings")
+                .size(24)
+                .width(Length::Fill)
+                .style(|_theme| text::Style {
+                    color: Some(Color::from_rgb(0.9, 0.9, 0.9))
+                }),
+            button(text("✕").size(20))
+                .on_press(Message::HideSettingsModal)
+                .padding([4, 10])
+                .style(styles::header_button_style),
+        ]
+            .align_y(Alignment::Center)
+            .spacing(10),
+    )
+        .padding([15, 20])
+        .width(Length::Fill);
+
+    // Theme picker
+    let theme_section = column![
+        text("Theme")
+            .size(16)
+            .style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.8, 0.8, 0.8))
+            }),
+        pick_list(
+            Theme::ALL,
+            Some(&settings.theme),
+            Message::ThemeChanged,
+        )
+        .width(Length::Fill)
+        .padding(10),
+    ]
+        .spacing(8);
+
+    // Temperature threshold inputs
+    let temp_section = column![
+        text("Temperature Thresholds")
+            .size(16)
+            .style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.8, 0.8, 0.8))
+            }),
+        text("Configure temperature ranges for tray icon color changes")
+            .size(12)
+            .style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+            }),
+        row![
+            column![
+                text("Low Threshold (°C)")
+                    .size(14)
+                    .style(|_theme| text::Style {
+                        color: Some(Color::from_rgb(0.7, 0.7, 0.7))
+                    }),
+                text_input("60", &settings.temp_low_input)
+                    .on_input(Message::TempLowThresholdChanged)
+                    .padding(10)
+                    .width(Length::Fixed(80.0)),
+            ]
+            .spacing(5),
+            column![
+                text("High Threshold (°C)")
+                    .size(14)
+                    .style(|_theme| text::Style {
+                        color: Some(Color::from_rgb(0.7, 0.7, 0.7))
+                    }),
+                text_input("80", &settings.temp_high_input)
+                    .on_input(Message::TempHighThresholdChanged)
+                    .padding(10)
+                    .width(Length::Fixed(80.0)),
+            ]
+            .spacing(5),
+        ]
+        .spacing(15),
+        text("Low: ≤ Low threshold | Medium: Between thresholds | High: ≥ High threshold")
+            .size(11)
+            .style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.55, 0.55, 0.55))
+            }),
+    ]
+        .spacing(8);
+
+    // Save button
+    let save_button = button(
+        text("Save Settings")
+            .width(Length::Fill)
+            .align_x(iced::alignment::Horizontal::Center),
+    )
+        .on_press(Message::SaveSettings)
+        .padding(12)
+        .width(Length::Fill)
+        .style(styles::rounded_button_style);
+
+    // Combine all sections
+    let content = column![
+        header,
+        rule::horizontal(1),
+        container(
+            column![theme_section, temp_section, save_button]
+                .spacing(20)
+                .padding([20, 0]),
+        )
+        .padding([10, 20])
+        .width(Length::Fill)
+        .height(Length::Fill),
+    ]
+        .width(450)
+        .height(500);
+
+    // Modal content container
+    let modal_content = container(content)
+        .width(450)
+        .height(500)
+        .style(styles::modal_generic);
+
     modal(base, modal_content, Message::HideSettingsModal, false)
 }

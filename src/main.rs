@@ -17,6 +17,7 @@ use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder,
 };
+use crate::app::modal::Settings;
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -93,6 +94,9 @@ enum Message {
     ShowSettingsModal,
     HideSettingsModal,
     ThemeChanged(Theme),
+    TempLowThresholdChanged(String),
+    TempHighThresholdChanged(String),
+    SaveSettings,
     MainButtonPressed,
     PlotterButtonPressed,
     UpdateHardwareData,
@@ -113,9 +117,9 @@ struct App {
     cpu_data: CpuData,
     system: System,
     current_screen: Screen,
-    app_screen: Screen,
     show_modal: bool,
     current_theme: Theme,
+    settings: Settings,
     main_window: main_window::MainWindow,
     tray_icon: tray_icon::TrayIcon,
     show_menu_id: MenuId,
@@ -124,11 +128,11 @@ struct App {
 
 impl App {
     /// Update tray tooltip with live hw data
-    // TODO: Change icon color based on temperature
+    // Temperature thresholds for icon color changes are configurable in settings
     fn update_tray_tooltip(&self) {
         let tooltip = format!(
             "CPU: {:.0}°C ({:.0}%)\nPower: {:.1}W",
-            self.cpu_data.cpu_temp, self.cpu_data.cpu_usage, self.cpu_data.total_power_draw
+            self.cpu_data.temp, self.cpu_data.usage, self.cpu_data.total_power_draw
         );
 
         if let Err(e) = self.tray_icon.set_tooltip(Some(&tooltip)) {
@@ -138,7 +142,7 @@ impl App {
 
     fn new() -> (Self, Task<Message>) {
         let window_settings = window::Settings {
-            size: iced::Size::new(950.0, 650.0),
+            size: iced::Size::new(800.0, 700.0),
             position: window::Position::Centered,
             min_size: Some(iced::Size::new(500.0, 400.0)),
             icon: window::icon::from_file("assets/logo.ico").ok(),
@@ -183,6 +187,9 @@ impl App {
         system.refresh_cpu_all();
         let cpu_data = CpuData::new(&system);
         let hw_monitor_service = None;
+        let settings = Settings::default();
+        let current_theme = settings.theme.clone();
+
         // Create task to connect to hardware monitor
         let connect_task = Task::future(async {
             Message::HardwareMonitorConnected(connect_to_lhwm_service().await)
@@ -195,9 +202,9 @@ impl App {
                 cpu_data,
                 system,
                 current_screen: Screen::Main,
-                app_screen: Screen::Main,
                 show_modal: false,
-                current_theme: Theme::Dracula,
+                current_theme,
+                settings,
                 main_window: main_window::MainWindow::new(),
                 tray_icon,
                 show_menu_id: show_id,
@@ -241,7 +248,7 @@ impl App {
                     // If window is closed, reopen it
                     if self.window_id.is_none() {
                         let window_settings = window::Settings {
-                            size: iced::Size::new(950.0, 650.0),
+                            size: iced::Size::new(800.0, 700.0),
                             position: window::Position::Centered,
                             min_size: Some(iced::Size::new(500.0, 400.0)),
                             icon: window::icon::from_file("assets/logo.ico").ok(),
@@ -261,7 +268,30 @@ impl App {
                 }
             }
             Message::ThemeChanged(theme) => {
-                self.current_theme = theme;
+                self.settings.theme = theme.clone();
+                Task::none()
+            }
+            Message::TempLowThresholdChanged(value) => {
+                self.settings.temp_low_input = value;
+                Task::none()
+            }
+            Message::TempHighThresholdChanged(value) => {
+                self.settings.temp_high_input = value;
+                Task::none()
+            }
+            Message::SaveSettings => {
+                // Parse and validate temperature thresholds
+                if let Ok(low) = self.settings.temp_low_input.parse::<f32>() {
+                    if let Ok(high) = self.settings.temp_high_input.parse::<f32>() {
+                        if low < high {
+                            self.settings.temp_low_threshold = low;
+                            self.settings.temp_high_threshold = high;
+                            self.current_theme = self.settings.theme.clone();
+                            println!("Settings saved: Low threshold: {}°C, High threshold: {}°C", low, high);
+                        }
+                    }
+                }
+                self.show_modal = false;
                 Task::none()
             }
             Message::MainButtonPressed | Message::PlotterButtonPressed => {
@@ -269,6 +299,9 @@ impl App {
                 Task::none()
             }
             Message::ShowSettingsModal => {
+                // Reset input fields to current saved values when opening modal
+                self.settings.temp_low_input = self.settings.temp_low_threshold.to_string();
+                self.settings.temp_high_input = self.settings.temp_high_threshold.to_string();
                 self.show_modal = true;
                 Task::none()
             }
@@ -297,10 +330,7 @@ impl App {
             }
             Message::CpuValuesUpdated(temps) => {
                 // Collect everything from lhm queries into CpuData
-                self.cpu_data.cpu_temp = temps.0;
-                self.cpu_data.total_power_draw = temps.1;
-                self.cpu_data.core_power_draw = temps.2;
-
+                self.cpu_data.update_lhm_data(temps);
                 // Update tray tooltip with fresh hardware data
                 self.update_tray_tooltip();
 
@@ -322,7 +352,7 @@ impl App {
             Screen::Settings => container("").into(),
         };
         if self.show_modal {
-            modal::settings_view(layout::with_header(page))
+            modal::settings_view(layout::with_header(page), &self.settings)
         } else {
             layout::with_header(page)
         }
