@@ -8,12 +8,14 @@ build = "build.rs"
 
 [dependencies]
 iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "image", "svg"] }
+anyhow = "1.0.100"
 tokio = { version = "=1.45.1", features = ["rt", "time", "fs", "macros"] }
 colored = "3.0.0"
 tray-icon = "0.14.3"
 image = { version = "0.25", features = ["jpeg", "png"] }
 sysinfo = "0.37.2"
 csv = "1.4.0"
+toml = "0.9.8"
 env_logger = "0.11.8"
 wmi = "0.17.3"
 lhm-client = "0.3.0"
@@ -23,6 +25,7 @@ windows = { version = "0.52.0", features = [
     "Win32_System_Performance",
     "Win32_UI_WindowsAndMessaging",
 ] }
+serde = "1.0.228"
 
 [package.metadata.packager]
 formats = ["nsis"]

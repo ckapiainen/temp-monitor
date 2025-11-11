@@ -1,31 +1,11 @@
 use crate::app::styles;
-use crate::{Message};
+use crate::{model, Message};
 use iced::widget::{
     button, center, column, container, mouse_area, opaque, pick_list, row, rule, stack, text,
     text_input,
 };
 use iced::{Alignment, Color, Element, Length, Theme};
 
-#[derive(Clone)]
-pub struct Settings {
-    pub theme: Theme,
-    pub temp_low_threshold: f32,
-    pub temp_high_threshold: f32,
-    pub temp_low_input: String,
-    pub temp_high_input: String,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            theme: Theme::Dracula,
-            temp_low_threshold: 60.0,
-            temp_high_threshold: 80.0,
-            temp_low_input: "60".to_string(),
-            temp_high_input: "80".to_string(),
-        }
-    }
-}
 
 /// Generic modal with a semi-transparent background and centered content
 fn modal<'a, Message: Clone>(
@@ -77,7 +57,7 @@ where
 // "Show CPU usage" checkbox
 // "Show power draw" checkbox
 
-pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a Settings) -> Element<'a, Message> {
+pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config::Settings) -> Element<'a, Message> {
     // Header with title and close button
     let header = container(
         row![

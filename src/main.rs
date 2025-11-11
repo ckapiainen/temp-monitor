@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide terminal on Windows
 mod app;
 mod collectors;
+mod model;
 
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
@@ -17,7 +18,7 @@ use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder,
 };
-use crate::app::modal::Settings;
+use model::config::Settings;
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -78,7 +79,6 @@ fn main() -> iced::Result {
             std::process::exit(1);
         }
     }
-
     iced::daemon(|| App::new(), App::update, App::view)
         .subscription(App::subscription)
         .title("TempMon")
@@ -187,7 +187,7 @@ impl App {
         system.refresh_cpu_all();
         let cpu_data = CpuData::new(&system);
         let hw_monitor_service = None;
-        let settings = Settings::default();
+        let settings = Settings::load().expect("Error loading settings");
         let current_theme = settings.theme.clone();
 
         // Create task to connect to hardware monitor
@@ -287,10 +287,10 @@ impl App {
                             self.settings.temp_low_threshold = low;
                             self.settings.temp_high_threshold = high;
                             self.current_theme = self.settings.theme.clone();
-                            println!("Settings saved: Low threshold: {}°C, High threshold: {}°C", low, high);
                         }
                     }
                 }
+                Settings::save(&self.settings);
                 self.show_modal = false;
                 Task::none()
             }
