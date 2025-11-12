@@ -115,18 +115,18 @@ impl MainWindow {
                 .on_link_click(never)
                 .size(17),
             ]
-                .spacing(10)
-                .align_y(Center)
-                .padding(Padding {
-                    top: 10.0,
-                    right: 10.0,
-                    bottom: 0.0,
-                    left: 10.0,
-                }),
+            .spacing(10)
+            .align_y(Center)
+            .padding(Padding {
+                top: 10.0,
+                right: 10.0,
+                bottom: 0.0,
+                left: 10.0,
+            }),
         )
-            .on_press(Message::ToggleGeneralInfo)
-            .width(Fill)
-            .style(styles::header_button_style);
+        .on_press(Message::ToggleGeneralInfo)
+        .width(Fill)
+        .style(styles::header_button_style);
 
         let general_content = if is_general_expanded {
             // Expanded view - show full stats
@@ -134,16 +134,14 @@ impl MainWindow {
                 text("LOAD").size(20),
                 text(format!("{:.2}%", cpu_data.usage)).size(55),
                 row![
-                    text(format!("L: {:.2}%", cpu_data.usage_low))
-                        .size(20),
+                    text(format!("L: {:.2}%", cpu_data.usage_low)).size(20),
                     text(" | ").size(20),
-                    text(format!("H: {:.2}%", cpu_data.usage_high))
-                        .size(20),
+                    text(format!("H: {:.2}%", cpu_data.usage_high)).size(20),
                 ]
                 .spacing(5)
             ]
-                .align_x(Center)
-                .width(195);
+            .align_x(Center)
+            .width(195);
 
             let temp = column![
                 text("TEMP").size(20),
@@ -162,16 +160,14 @@ impl MainWindow {
                 ]
                 .on_link_click(never),
                 row![
-                    text(format!("L: {:.2}°C", cpu_data.temp_low))
-                        .size(20),
+                    text(format!("L: {:.2}°C", cpu_data.temp_low)).size(20),
                     text(" | ").size(20),
-                    text(format!("H: {:.2}°C", cpu_data.temp_high))
-                        .size(20),
+                    text(format!("H: {:.2}°C", cpu_data.temp_high)).size(20),
                 ]
                 .spacing(5)
             ]
-                .align_x(Center)
-                .width(215);
+            .align_x(Center)
+            .width(215);
 
             let clock_speed = column![
                 text("CLOCK SPEED").size(18),
@@ -185,8 +181,8 @@ impl MainWindow {
                 text("PACKAGE POWER").size(18),
                 text(format!("{:.1} W", cpu_data.total_power_draw)).size(38)
             ]
-                .align_x(Center)
-                .width(190);
+            .align_x(Center)
+            .width(190);
 
             let stats_row = row![
                 total_load,
@@ -195,14 +191,14 @@ impl MainWindow {
                 rule::vertical(1),
                 clock_speed
             ]
-                .spacing(25)
-                .align_y(Center)
-                .padding(Padding {
-                    top: 0.0,
-                    right: 0.0,
-                    bottom: 10.0,
-                    left: 0.0,
-                });
+            .spacing(25)
+            .align_y(Center)
+            .padding(Padding {
+                top: 0.0,
+                right: 0.0,
+                bottom: 10.0,
+                left: 0.0,
+            });
 
             column![general_header_button, rule::horizontal(1), stats_row]
                 .align_x(Center)
@@ -210,21 +206,22 @@ impl MainWindow {
         } else {
             // Collapsed view - show header with key metrics in one line
             let collapsed_info = row![
-                text(format!("{}°C", cpu_data.temp as i32))
-                    .size(25),
+                text(format!("{}°C", cpu_data.temp as i32)).size(25),
                 text("|").size(25),
                 text(format!("{:.1}%", cpu_data.usage)).size(25),
             ]
-                .spacing(10)
-                .align_y(Center)
-                .padding(Padding {
-                    top: 10.0,
-                    right: 10.0,
-                    bottom: 10.0,
-                    left: 10.0,
-                });
+            .spacing(10)
+            .align_y(Center)
+            .padding(Padding {
+                top: 10.0,
+                right: 10.0,
+                bottom: 10.0,
+                left: 10.0,
+            });
 
-            column![row![general_header_button, collapsed_info,].width(Fill).align_y(Center)]
+            column![row![general_header_button, collapsed_info,]
+                .width(Fill)
+                .align_y(Center)]
         };
 
         let general_cpu_info_card = container(general_content)
@@ -253,16 +250,16 @@ impl MainWindow {
                         ..Font::default()
                     })
                     .size(15),
-                span(format!("{}", core.name))
+                span(core.name.to_string())
                     .font(Font {
                         weight: font::Weight::Thin,
                         ..Font::default()
                     })
                     .size(15),
             ]
-                .on_link_click(never)
-                .align_x(Center)
-                .width(55);
+            .on_link_click(never)
+            .align_x(Center)
+            .width(55);
             let core_col = column![utilization, name_util_val].align_x(Center);
             usage_bar_chart.push(core_col.into());
 
@@ -289,16 +286,16 @@ impl MainWindow {
                         ..Font::default()
                     })
                     .size(15),
-                span(format!("{}", core.name.replace("#", "")))
+                span(core.name.replace("#", "").to_string())
                     .font(Font {
                         weight: font::Weight::Thin,
                         ..Font::default()
                     })
                     .size(15),
             ]
-                .on_link_click(never)
-                .align_x(Center)
-                .width(55);
+            .on_link_click(never)
+            .align_x(Center)
+            .width(55);
             let core_col = column![wattage_bar, name_util_val].align_x(Center);
             power_bar_chart.push(core_col.into());
 
@@ -322,54 +319,47 @@ impl MainWindow {
         let cores_card_height = 50.0 + (cores_animation_factor * (280.0 - 50.0));
         let is_cores_expanded = self.cores_card_expanded.value > 0.5;
 
-
         // Icon buttons for usage and power
         let usage_button = button(
             container(
                 svg(svg::Handle::from_path("assets/icons/microchip.svg"))
                     .width(25)
-                    .height(25)
+                    .height(25),
             )
-                .align_x(Center)
-                .align_y(Center)
-                .width(25)
-                .height(25)
+            .align_x(Center)
+            .align_y(Center)
+            .width(25)
+            .height(25),
         )
-            .on_press(Message::UsageButtonPressed)
-            .style(styles::compact_icon_button_style);
+        .on_press(Message::UsageButtonPressed)
+        .style(styles::compact_icon_button_style);
 
         let power_button = button(
             container(
                 svg(svg::Handle::from_path("assets/icons/plug-zap.svg"))
                     .width(25)
-                    .height(25)
+                    .height(25),
             )
-                .align_x(Center)
-                .align_y(Center)
-                .width(25)
-                .height(25)
+            .align_x(Center)
+            .align_y(Center)
+            .width(25)
+            .height(25),
         )
-            .on_press(Message::PowerButtonPressed)
-            .style(styles::compact_icon_button_style);
+        .on_press(Message::PowerButtonPressed)
+        .style(styles::compact_icon_button_style);
 
         // Clickable header
-        let cores_header_button = button(
-            text("CORES").size(15).font(Font {
-                weight: font::Weight::Bold,
-                ..Font::default()
-            }),
-        )
-            .on_press(Message::ToggleCoresCard)
-            .width(Fill)
-            .style(styles::header_button_style);
+        let cores_header_button = button(text("CORES").size(15).font(Font {
+            weight: font::Weight::Bold,
+            ..Font::default()
+        }))
+        .on_press(Message::ToggleCoresCard)
+        .width(Fill)
+        .style(styles::header_button_style);
 
         let cores_card_content = if is_cores_expanded {
             // Expanded view - show full progress bars
-            let header_row = row![
-                cores_header_button,
-                usage_button,
-                power_button,
-            ]
+            let header_row = row![cores_header_button, usage_button, power_button,]
                 .align_y(Center)
                 .spacing(8)
                 .width(Fill);
@@ -382,9 +372,9 @@ impl MainWindow {
                     BarChartState::Power => core_power_row,
                 }
             ]
-                .align_x(Center)
-                .spacing(10)
-                .padding(10)
+            .align_x(Center)
+            .spacing(10)
+            .padding(10)
         } else {
             // Collapsed view - show summary with buttons
             let mode_text = match self.bar_chart_state {
@@ -397,7 +387,7 @@ impl MainWindow {
                 text("|").size(14),
                 text(mode_text).size(14),
             ]
-                .spacing(10);
+            .spacing(10);
 
             column![row![
                 cores_header_button,
@@ -405,10 +395,10 @@ impl MainWindow {
                 usage_button,
                 power_button,
             ]
-                .align_y(Center)
-                .spacing(8)
-                .width(Fill)]
-                .padding(10)
+            .align_y(Center)
+            .spacing(8)
+            .width(Fill)]
+            .padding(10)
         };
 
         let cores_card = container(cores_card_content)

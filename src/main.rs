@@ -12,13 +12,13 @@ use iced::widget::container;
 use iced::{window, Element, Subscription, Task, Theme};
 use lhm_client::service::is_service_installed;
 use lhm_client::{ComputerOptions, LHMClient};
+use model::config::Settings;
 use std::time::Duration;
 use sysinfo::System;
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder,
 };
-use model::config::Settings;
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -79,7 +79,7 @@ fn main() -> iced::Result {
             std::process::exit(1);
         }
     }
-    iced::daemon(|| App::new(), App::update, App::view)
+    iced::daemon(App::new, App::update, App::view)
         .subscription(App::subscription)
         .title("TempMon")
         .theme(App::theme)
@@ -238,7 +238,7 @@ impl App {
                 self.window_id = Some(id);
                 Task::none()
             }
-            Message::WindowClosed(id) => {
+            Message::WindowClosed(_id) => {
                 dbg!("Window closed, daemon still running...");
                 self.window_id = None;
                 Task::none()
@@ -287,7 +287,7 @@ impl App {
                         }
                     }
                 }
-                Settings::save(&self.settings);
+                Settings::save(&self.settings).expect("Error saving settings");
                 self.show_modal = false;
                 Task::none()
             }
@@ -336,7 +336,7 @@ impl App {
         }
     }
 
-    fn view(&self, window_id: window::Id) -> Element<Message> {
+    fn view(&self, window_id: window::Id) -> Element<'_, Message> {
         if self.window_id != Some(window_id) {
             return container("").into();
         }

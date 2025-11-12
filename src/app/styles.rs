@@ -2,7 +2,6 @@ use iced::widget::{button, container};
 use iced::{Background, Theme};
 
 /// Styling for components, currently only dark theme is supported
-
 pub fn rounded_button_style(_theme: &Theme, status: button::Status) -> button::Style {
     match status {
         button::Status::Active => button::Style {
@@ -180,7 +179,9 @@ pub fn header_button_style(_theme: &Theme, status: button::Status) -> button::St
             snap: false,
         },
         button::Status::Hovered => button::Style {
-            background: Some(Background::Color(iced::Color::from_rgba(0.3, 0.3, 0.35, 0.3))),
+            background: Some(Background::Color(iced::Color::from_rgba(
+                0.3, 0.3, 0.35, 0.3,
+            ))),
             border: iced::Border {
                 color: iced::Color::TRANSPARENT,
                 width: 0.0,
@@ -191,7 +192,9 @@ pub fn header_button_style(_theme: &Theme, status: button::Status) -> button::St
             snap: false,
         },
         button::Status::Pressed => button::Style {
-            background: Some(Background::Color(iced::Color::from_rgba(0.2, 0.2, 0.25, 0.4))),
+            background: Some(Background::Color(iced::Color::from_rgba(
+                0.2, 0.2, 0.25, 0.4,
+            ))),
             border: iced::Border {
                 color: iced::Color::TRANSPARENT,
                 width: 0.0,

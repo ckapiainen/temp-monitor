@@ -1,5 +1,5 @@
-use lhm_client::{HardwareType, SensorType};
 use super::CoreStats;
+use lhm_client::{HardwareType, SensorType};
 
 pub async fn lhm_cpu_queries(client: &lhm_client::LHMClientHandle) -> (f32, f32, Vec<CoreStats>) {
     // Request all CPU hardware
@@ -43,11 +43,12 @@ pub async fn lhm_cpu_queries(client: &lhm_client::LHMClientHandle) -> (f32, f32,
             .unwrap();
         total_package_power = total.value;
 
-        core_power = power_query.iter()
+        core_power = power_query
+            .iter()
             .filter(|sensor| sensor.name.contains("Core"))
             .map(|sensor| CoreStats {
                 name: sensor.name.clone(),
-                value: sensor.value
+                value: sensor.value,
             })
             .collect();
 

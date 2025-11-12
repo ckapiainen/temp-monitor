@@ -6,9 +6,8 @@ use iced::widget::{
 };
 use iced::{Alignment, Color, Element, Length, Theme};
 
-
 /// Generic modal with a semi-transparent background and centered content
-fn modal<'a, Message: Clone>(
+fn modal<'a, Message>(
     base: impl Into<Element<'a, Message>>,
     content: impl Into<Element<'a, Message>>,
     hide_modal: Message,
@@ -29,7 +28,7 @@ where
                             a: 0.7,
                             ..Color::BLACK
                         }
-                            .into(),
+                        .into(),
                     ),
                     ..container::Style::default()
                 }
@@ -45,7 +44,6 @@ where
     stack![base.into(), backdrop].into()
 }
 
-
 // TODO: More settings
 // Update interval picker (0.5s, 1s, 2s, 5s)
 // Startup Behavior:
@@ -57,7 +55,10 @@ where
 // "Show CPU usage" checkbox
 // "Show power draw" checkbox
 
-pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config::Settings) -> Element<'a, Message> {
+pub fn settings_view<'a>(
+    base: Element<'a, Message>,
+    settings: &'a model::config::Settings,
+) -> Element<'a, Message> {
     // Header with title and close button
     let header = container(
         row![
@@ -72,19 +73,17 @@ pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config
                 .padding([4, 10])
                 .style(styles::header_button_style),
         ]
-            .align_y(Alignment::Center)
-            .spacing(10),
+        .align_y(Alignment::Center)
+        .spacing(10),
     )
-        .padding([15, 20])
-        .width(Length::Fill);
+    .padding([15, 20])
+    .width(Length::Fill);
 
     // Theme picker
     let theme_section = column![
-        text("Theme")
-            .size(16)
-            .style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.8, 0.8, 0.8))
-            }),
+        text("Theme").size(16).style(|_theme| text::Style {
+            color: Some(Color::from_rgb(0.8, 0.8, 0.8))
+        }),
         pick_list(
             [Theme::Dracula, Theme::Ferra, Theme::Dark, Theme::Nord],
             Some(&settings.theme),
@@ -93,7 +92,7 @@ pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config
         .width(Length::Fill)
         .padding(10),
     ]
-        .spacing(8);
+    .spacing(8);
 
     // Temperature threshold inputs
     let temp_section = column![
@@ -140,7 +139,7 @@ pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config
                 color: Some(Color::from_rgb(0.55, 0.55, 0.55))
             }),
     ]
-        .spacing(8);
+    .spacing(8);
 
     // Save button
     let save_button = button(
@@ -148,10 +147,10 @@ pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config
             .width(Length::Fill)
             .align_x(iced::alignment::Horizontal::Center),
     )
-        .on_press(Message::SaveSettings)
-        .padding(12)
-        .width(Length::Fill)
-        .style(styles::rounded_button_style);
+    .on_press(Message::SaveSettings)
+    .padding(12)
+    .width(Length::Fill)
+    .style(styles::rounded_button_style);
 
     // Combine all sections
     let content = column![
@@ -166,8 +165,8 @@ pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config
         .width(Length::Fill)
         .height(Length::Fill),
     ]
-        .width(450)
-        .height(500);
+    .width(450)
+    .height(500);
 
     // Modal content container
     let modal_content = container(content)

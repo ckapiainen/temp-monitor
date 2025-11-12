@@ -61,8 +61,7 @@ impl Settings {
 
         // Create directory if needed
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .context("Failed to create config directory")?;
+            fs::create_dir_all(parent).context("Failed to create config directory")?;
         }
 
         let theme_name = self.theme.to_string();

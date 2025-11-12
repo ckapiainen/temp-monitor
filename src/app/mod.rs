@@ -1,4 +1,4 @@
-pub mod main_window;
 pub mod layout;
-pub mod styles;
+pub mod main_window;
 pub mod modal;
+pub mod styles;

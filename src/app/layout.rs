@@ -1,5 +1,5 @@
 use crate::app::styles;
-use crate::{Message};
+use crate::Message;
 use iced::widget::{button, column, container, row, svg};
 use iced::{Center, Element, Fill};
 
