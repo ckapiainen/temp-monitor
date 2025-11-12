@@ -86,7 +86,7 @@ pub fn settings_view<'a>(base: Element<'a, Message>, settings: &'a model::config
                 color: Some(Color::from_rgb(0.8, 0.8, 0.8))
             }),
         pick_list(
-            Theme::ALL,
+            [Theme::Dracula, Theme::Ferra, Theme::Dark, Theme::Nord],
             Some(&settings.theme),
             Message::ThemeChanged,
         )

@@ -252,9 +252,6 @@ impl App {
                             position: window::Position::Centered,
                             min_size: Some(iced::Size::new(500.0, 400.0)),
                             icon: window::icon::from_file("assets/logo.ico").ok(),
-                            resizable: true,
-                            decorations: true,
-                            level: window::Level::Normal,
                             ..Default::default()
                         };
                         let (_, open_task) = window::open(window_settings);

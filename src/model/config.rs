@@ -38,33 +38,15 @@ impl Settings {
             .with_context(|| format!("Failed to read config from {}", Self::CONFIG_PATH))?;
         let config: Config = toml::from_str(&contents).with_context(|| "Failed to parse config")?;
 
-        // TODO: DECREASE THE THEME AVAILABLE IN SETTINGS
         let theme = match config.theme.as_str() {
             "Dark" => Theme::Dark,
-            "Light" => Theme::Light,
             "Dracula" => Theme::Dracula,
             "Nord" => Theme::Nord,
-            "SolarizedLight" => Theme::SolarizedLight,
-            "SolarizedDark" => Theme::SolarizedDark,
-            "GruvboxLight" => Theme::GruvboxLight,
-            "GruvboxDark" => Theme::GruvboxDark,
-            "CatppuccinLatte" => Theme::CatppuccinLatte,
-            "CatppuccinFrappe" => Theme::CatppuccinFrappe,
-            "CatppuccinMacchiato" => Theme::CatppuccinMacchiato,
-            "CatppuccinMocha" => Theme::CatppuccinMocha,
-            "TokyoNight" => Theme::TokyoNight,
-            "TokyoNightStorm" => Theme::TokyoNightStorm,
-            "TokyoNightLight" => Theme::TokyoNightLight,
-            "KanagawaWave" => Theme::KanagawaWave,
-            "KanagawaDragon" => Theme::KanagawaDragon,
-            "KanagawaLotus" => Theme::KanagawaLotus,
-            "Moonfly" => Theme::Moonfly,
-            "Nightfly" => Theme::Nightfly,
-            "Oxocarbon" => Theme::Oxocarbon,
             "Ferra" => Theme::Ferra,
             _ => Theme::Dracula,
         };
 
+        dbg!("Loaded config from disk");
         Ok(Self {
             theme,
             temp_low_threshold: config.temp_low_threshold,
@@ -93,6 +75,7 @@ impl Settings {
         let toml = toml::to_string_pretty(&config).context("Failed to serialize config")?;
         fs::write(Self::CONFIG_PATH, toml)
             .with_context(|| format!("Failed to write config to {}", Self::CONFIG_PATH))?;
+        dbg!("Saved config to disk");
         Ok(())
     }
 }
