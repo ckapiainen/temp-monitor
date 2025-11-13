@@ -8,6 +8,9 @@ use std::path::Path;
 #[derive(Serialize, Deserialize)]
 struct Config {
     theme: String,
+    start_with_windows: bool,
+    start_minimized: bool,
+    selected_temp_units: TempUnits,
     temp_low_threshold: f32,
     temp_high_threshold: f32,
 }
@@ -16,10 +19,26 @@ struct Config {
 #[derive(Clone)]
 pub struct Settings {
     pub theme: Theme,
+    pub start_with_windows: bool,
+    pub start_minimized: bool,
+    pub selected_temp_units: TempUnits,
     pub temp_low_threshold: f32,
     pub temp_high_threshold: f32,
     pub temp_low_input: String,
     pub temp_high_input: String,
+}
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum TempUnits {
+    Celsius,
+    Fahrenheit,
+}
+#[derive(Clone)]
+pub enum Message {
+    ToggleStartWithWindows,
+    ToggleStartMinimized,
+    TempUnitSelected(TempUnits),
+    TempLowThresholdChanged(String),
+    TempHighThresholdChanged(String),
 }
 
 impl Settings {
@@ -49,6 +68,9 @@ impl Settings {
         dbg!("Loaded config from disk");
         Ok(Self {
             theme,
+            start_minimized: config.start_minimized,
+            start_with_windows: config.start_with_windows,
+            selected_temp_units: config.selected_temp_units,
             temp_low_threshold: config.temp_low_threshold,
             temp_high_threshold: config.temp_high_threshold,
             temp_low_input: config.temp_low_threshold.to_string(),
@@ -67,6 +89,9 @@ impl Settings {
         let theme_name = self.theme.to_string();
         let config = Config {
             theme: theme_name,
+            start_minimized: self.start_minimized,
+            start_with_windows: self.start_with_windows,
+            selected_temp_units: self.selected_temp_units,
             temp_low_threshold: self.temp_low_threshold,
             temp_high_threshold: self.temp_high_threshold,
         };
@@ -77,12 +102,17 @@ impl Settings {
         dbg!("Saved config to disk");
         Ok(())
     }
+    
+    
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: Theme::Dracula,
+            start_with_windows: true,
+            start_minimized: false,
+            selected_temp_units: TempUnits::Celsius,
             temp_low_threshold: 40.0,
             temp_high_threshold: 70.0,
             temp_low_input: "40".to_string(),

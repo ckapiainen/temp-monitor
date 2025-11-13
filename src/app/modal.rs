@@ -1,13 +1,13 @@
 use crate::app::styles;
 use crate::{model, Message};
 use iced::widget::{
-    button, center, column, container, mouse_area, opaque, pick_list, row, rule, stack, text,
-    text_input,
+    button, center, checkbox, column, container, mouse_area, opaque, pick_list, row, rule,
+    scrollable, stack, text, text_input,
 };
 use iced::{Alignment, Color, Element, Length, Theme};
 
 /// Generic modal with a semi-transparent background and centered content
-fn modal<'a, Message>(
+pub fn modal<'a, Message>(
     base: impl Into<Element<'a, Message>>,
     content: impl Into<Element<'a, Message>>,
     hide_modal: Message,
@@ -94,6 +94,21 @@ pub fn settings_view<'a>(
     ]
     .spacing(8);
 
+    // Toggle settings TODO: Finish picklist and move whole settings view into Settings Struct. Add update method to Settings struct.
+    let toggle_buttons = row![
+        checkbox("Start with Windows", settings.start_with_windows),//.on_toggle(Message::ToggleStartWithWindows),
+        checkbox("Start minimized to tray", settings.start_minimized),//.on_toggle(Message::ToggleStartMinimized)
+        //pick_list([model::config::TempUnits::Celsius, model::config::TempUnits::Fahrenheit], settings.selected_temp_units, ()),
+    ]
+    .spacing(15);
+
+    let toggle_section = column![
+        text("Behaviour").size(16).style(|_theme| text::Style {
+            color: Some(Color::from_rgb(0.8, 0.8, 0.8))
+        }),
+        toggle_buttons
+    ].spacing(8);
+
     // Temperature threshold inputs
     let temp_section = column![
         text("Temperature Thresholds")
@@ -156,11 +171,11 @@ pub fn settings_view<'a>(
     let content = column![
         header,
         rule::horizontal(1),
-        container(
-            column![theme_section, temp_section, save_button]
+        container(scrollable(
+            column![theme_section, toggle_section, temp_section, save_button]
                 .spacing(20)
                 .padding([20, 0]),
-        )
+        ))
         .padding([10, 20])
         .width(Length::Fill)
         .height(Length::Fill),

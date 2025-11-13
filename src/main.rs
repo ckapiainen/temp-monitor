@@ -94,6 +94,9 @@ enum Message {
     ShowSettingsModal,
     HideSettingsModal,
     ThemeChanged(Theme),
+    ToggleStartWithWindows(bool),
+    ToggleStartMinimized(bool),
+    TempUnitSelected(model::config::TempUnits),
     TempLowThresholdChanged(String),
     TempHighThresholdChanged(String),
     SaveSettings,
@@ -117,7 +120,7 @@ struct App {
     cpu_data: CpuData,
     system: System,
     current_screen: Screen,
-    show_modal: bool,
+    show_settings_modal: bool,
     current_theme: Theme,
     settings: Settings,
     main_window: main_window::MainWindow,
@@ -202,7 +205,7 @@ impl App {
                 cpu_data,
                 system,
                 current_screen: Screen::Main,
-                show_modal: false,
+                show_settings_modal: false,
                 current_theme,
                 settings,
                 main_window: main_window::MainWindow::new(),
@@ -268,6 +271,18 @@ impl App {
                 self.settings.theme = theme.clone();
                 Task::none()
             }
+            Message::ToggleStartWithWindows(enabled) => {
+                self.settings.start_with_windows = enabled;
+                Task::none()
+            }
+            Message::ToggleStartMinimized(enabled) => {
+                self.settings.start_minimized = enabled;
+                Task::none()
+            }
+            Message::TempUnitSelected(unit) => {
+                self.settings.selected_temp_units = unit;
+                Task::none()
+            }
             Message::TempLowThresholdChanged(value) => {
                 self.settings.temp_low_input = value;
                 Task::none()
@@ -288,7 +303,7 @@ impl App {
                     }
                 }
                 Settings::save(&self.settings).expect("Error saving settings");
-                self.show_modal = false;
+                self.show_settings_modal = false;
                 Task::none()
             }
             Message::MainButtonPressed | Message::PlotterButtonPressed => {
@@ -299,11 +314,11 @@ impl App {
                 // Reset input fields to current saved values when opening modal
                 self.settings.temp_low_input = self.settings.temp_low_threshold.to_string();
                 self.settings.temp_high_input = self.settings.temp_high_threshold.to_string();
-                self.show_modal = true;
+                self.show_settings_modal = true;
                 Task::none()
             }
             Message::HideSettingsModal => {
-                self.show_modal = false;
+                self.show_settings_modal = false;
                 Task::none()
             }
             Message::MainWindow(msg) => {
@@ -348,7 +363,7 @@ impl App {
             Screen::Plotter => container("").into(),
             Screen::Settings => container("").into(),
         };
-        if self.show_modal {
+        if self.show_settings_modal {
             modal::settings_view(layout::with_header(page), &self.settings)
         } else {
             layout::with_header(page)
