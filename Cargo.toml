@@ -1,6 +1,6 @@
 [package]
 name = "temp-monitor"
-version = "0.2.0"
+version = "0.5.0"
 repository = "https://github.com/ckapiainen/temp-monitor"
 authors = ["ckapiainen"]
 edition = "2021"
@@ -49,3 +49,5 @@ installer_icon = "assets/logo.ico"
 
 [build-dependencies]
 embed-resource = "2.4"
+[profile.release]
+debug = true
