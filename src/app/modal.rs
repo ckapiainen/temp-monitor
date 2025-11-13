@@ -2,7 +2,7 @@ use crate::app::styles;
 use crate::{model, Message};
 use iced::widget::{
     button, center, checkbox, column, container, mouse_area, opaque, pick_list, row, rule,
-    scrollable, stack, text, text_input,
+    scrollable, slider, stack, text, text_input,
 };
 use iced::{Alignment, Color, Element, Length, Theme};
 
@@ -46,10 +46,6 @@ where
 
 // TODO: More settings
 // Update interval picker (0.5s, 1s, 2s, 5s)
-// Startup Behavior:
-// "Start with Windows" checkbox
-// "Start minimized to tray" checkbox
-// Temperature Units
 // Tray icon settings:
 // "Show temperature" checkbox
 // "Show CPU usage" checkbox
@@ -79,10 +75,15 @@ pub fn settings_view<'a>(
     .padding([15, 20])
     .width(Length::Fill);
 
-    // Theme picker
-    let theme_section = column![
-        text("Theme").size(16).style(|_theme| text::Style {
-            color: Some(Color::from_rgb(0.8, 0.8, 0.8))
+    // ========== APPEARANCE SECTION ==========
+    let appearance_section = column![
+        text("APPEARANCE")
+            .size(14)
+            .style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+            }),
+        text("Theme").size(15).style(|_theme| text::Style {
+            color: Some(Color::from_rgb(0.9, 0.9, 0.9))
         }),
         pick_list(
             [Theme::Dracula, Theme::Ferra, Theme::Dark, Theme::Nord],
@@ -94,65 +95,115 @@ pub fn settings_view<'a>(
     ]
     .spacing(8);
 
-    // Toggle settings TODO: Finish picklist and move whole settings view into Settings Struct. Add update method to Settings struct.
-    let toggle_buttons = row![
-        checkbox("Start with Windows", settings.start_with_windows),//.on_toggle(Message::ToggleStartWithWindows),
-        checkbox("Start minimized to tray", settings.start_minimized),//.on_toggle(Message::ToggleStartMinimized)
-        //pick_list([model::config::TempUnits::Celsius, model::config::TempUnits::Fahrenheit], settings.selected_temp_units, ()),
-    ]
-    .spacing(15);
-
-    let toggle_section = column![
-        text("Behaviour").size(16).style(|_theme| text::Style {
-            color: Some(Color::from_rgb(0.8, 0.8, 0.8))
-        }),
-        toggle_buttons
-    ].spacing(8);
-
-    // Temperature threshold inputs
-    let temp_section = column![
-        text("Temperature Thresholds")
-            .size(16)
-            .style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.8, 0.8, 0.8))
-            }),
-        text("Configure temperature ranges for tray icon color changes")
-            .size(12)
+    // ========== BEHAVIOR SECTION ==========
+    let behavior_section = column![
+        text("BEHAVIOR")
+            .size(14)
             .style(|_theme| text::Style {
                 color: Some(Color::from_rgb(0.6, 0.6, 0.6))
             }),
-        row![
-            column![
-                text("Low Threshold (°C)")
-                    .size(14)
-                    .style(|_theme| text::Style {
-                        color: Some(Color::from_rgb(0.7, 0.7, 0.7))
-                    }),
-                text_input("60", &settings.temp_low_input)
-                    .on_input(Message::TempLowThresholdChanged)
-                    .padding(10)
-                    .width(Length::Fixed(80.0)),
-            ]
-            .spacing(5),
-            column![
-                text("High Threshold (°C)")
-                    .size(14)
-                    .style(|_theme| text::Style {
-                        color: Some(Color::from_rgb(0.7, 0.7, 0.7))
-                    }),
-                text_input("80", &settings.temp_high_input)
-                    .on_input(Message::TempHighThresholdChanged)
-                    .padding(10)
-                    .width(Length::Fixed(80.0)),
-            ]
-            .spacing(5),
-        ]
-        .spacing(15),
-        text("Low: ≤ Low threshold | Medium: Between thresholds | High: ≥ High threshold")
-            .size(11)
-            .style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.55, 0.55, 0.55))
+        checkbox("Start with Windows", settings.start_with_windows),
+        checkbox("Start minimized to tray", settings.start_minimized),
+        column![
+            text("Update Interval").size(15).style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.9, 0.9, 0.9))
             }),
+            row![
+                slider(
+                    0.5..=10.0,
+                    settings.data_update_interval,
+                    Message::UpdateIntervalChanged
+                )
+                .step(0.5)
+                .width(Length::Fill),
+                container(
+                    text(format!("{:.1}s", settings.data_update_interval))
+                        .size(14)
+                        .style(|_theme| text::Style {
+                            color: Some(Color::from_rgb(0.8, 0.8, 0.8))
+                        })
+                )
+                .width(Length::Fixed(50.0))
+                .align_x(iced::alignment::Horizontal::Right),
+            ]
+            .spacing(10)
+            .align_y(Alignment::Center),
+            text("How often to refresh hardware data")
+                .size(12)
+                .style(|_theme| text::Style {
+                    color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+                }),
+        ]
+        .spacing(5),
+    ]
+    .spacing(8);
+
+    // ========== TEMPERATURE SECTION ==========
+    let temp_section = column![
+        text("TEMPERATURE")
+            .size(14)
+            .style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+            }),
+        column![
+            text("Units").size(15).style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.9, 0.9, 0.9))
+            }),
+            pick_list(
+                [
+                    model::config::TempUnits::Celsius,
+                    model::config::TempUnits::Fahrenheit,
+                ],
+                settings.selected_temp_units,
+                Message::TempUnitSelected,
+            )
+            .width(140)
+            .padding(10),
+        ]
+        .spacing(5),
+        column![
+            text("Thresholds").size(15).style(|_theme| text::Style {
+                color: Some(Color::from_rgb(0.9, 0.9, 0.9))
+            }),
+            row![
+                column![
+                    text("Low (°C)")
+                        .size(14)
+                        .style(|_theme| text::Style {
+                            color: Some(Color::from_rgb(0.7, 0.7, 0.7))
+                        }),
+                    text_input("60", &settings.temp_low_input)
+                        .on_input(Message::TempLowThresholdChanged)
+                        .padding(10)
+                        .width(Length::Fixed(80.0)),
+                ]
+                .spacing(5),
+                column![
+                    text("High (°C)")
+                        .size(14)
+                        .style(|_theme| text::Style {
+                            color: Some(Color::from_rgb(0.7, 0.7, 0.7))
+                        }),
+                    text_input("80", &settings.temp_high_input)
+                        .on_input(Message::TempHighThresholdChanged)
+                        .padding(10)
+                        .width(Length::Fixed(80.0)),
+                ]
+                .spacing(5),
+            ]
+            .spacing(15),
+            text("Configure temperature ranges for tray icon color changes")
+                .size(12)
+                .style(|_theme| text::Style {
+                    color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+                }),
+            text("Low: ≤ Low threshold | Medium: Between thresholds | High: ≥ High threshold")
+                .size(11)
+                .style(|_theme| text::Style {
+                    color: Some(Color::from_rgb(0.55, 0.55, 0.55))
+                }),
+        ]
+        .spacing(5),
     ]
     .spacing(8);
 
@@ -168,25 +219,52 @@ pub fn settings_view<'a>(
     .style(styles::rounded_button_style);
 
     // Combine all sections
+    let separator_color = Color::from_rgb(0.3, 0.3, 0.3);
     let content = column![
         header,
         rule::horizontal(1),
         container(scrollable(
-            column![theme_section, toggle_section, temp_section, save_button]
+            container(
+                column![
+                    appearance_section,
+                    rule::horizontal(1).style(move |_theme| rule::Style {
+                        color: separator_color,
+                        snap: false,
+                        fill_mode: rule::FillMode::Full,
+                        radius: 0.0.into(),
+                    }),
+                    behavior_section,
+                    rule::horizontal(1).style(move |_theme| rule::Style {
+                        color: separator_color,
+                        snap: false,
+                        fill_mode: rule::FillMode::Full,
+                        radius: 0.0.into(),
+                    }),
+                    temp_section,
+                    rule::horizontal(1).style(move |_theme| rule::Style {
+                        color: separator_color,
+                        snap: false,
+                        fill_mode: rule::FillMode::Full,
+                        radius: 0.0.into(),
+                    }),
+                    save_button,
+                ]
                 .spacing(20)
-                .padding([20, 0]),
+            )
+            .padding([20, 0])
+            .width(Length::Fill),
         ))
-        .padding([10, 20])
+        .padding(20)
         .width(Length::Fill)
         .height(Length::Fill),
     ]
-    .width(450)
-    .height(500);
+    .width(Length::Fill)
+    .height(Length::Fill);
 
     // Modal content container
     let modal_content = container(content)
-        .width(450)
-        .height(500)
+        .width(500)
+        .height(600)
         .style(styles::modal_generic);
 
     modal(base, modal_content, Message::HideSettingsModal, false)

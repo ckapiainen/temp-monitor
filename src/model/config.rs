@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use iced::Theme;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::Path;
+use std::{fmt, fs};
 
 // Saved to disk
 #[derive(Serialize, Deserialize)]
@@ -11,6 +11,7 @@ struct Config {
     start_with_windows: bool,
     start_minimized: bool,
     selected_temp_units: TempUnits,
+    data_update_interval: f32,
     temp_low_threshold: f32,
     temp_high_threshold: f32,
 }
@@ -21,17 +22,28 @@ pub struct Settings {
     pub theme: Theme,
     pub start_with_windows: bool,
     pub start_minimized: bool,
-    pub selected_temp_units: TempUnits,
+    pub selected_temp_units: Option<TempUnits>,
+    pub data_update_interval: f32,
     pub temp_low_threshold: f32,
     pub temp_high_threshold: f32,
     pub temp_low_input: String,
     pub temp_high_input: String,
+    pub update_interval_input: String,
 }
 #[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum TempUnits {
     Celsius,
     Fahrenheit,
 }
+impl fmt::Display for TempUnits {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TempUnits::Celsius => write!(f, "Celsius"),
+            TempUnits::Fahrenheit => write!(f, "Fahrenheit"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Message {
     ToggleStartWithWindows,
@@ -70,11 +82,13 @@ impl Settings {
             theme,
             start_minimized: config.start_minimized,
             start_with_windows: config.start_with_windows,
-            selected_temp_units: config.selected_temp_units,
+            selected_temp_units: Option::from(config.selected_temp_units),
+            data_update_interval: config.data_update_interval,
             temp_low_threshold: config.temp_low_threshold,
             temp_high_threshold: config.temp_high_threshold,
             temp_low_input: config.temp_low_threshold.to_string(),
             temp_high_input: config.temp_high_threshold.to_string(),
+            update_interval_input: config.data_update_interval.to_string(),
         })
     }
 
@@ -91,7 +105,8 @@ impl Settings {
             theme: theme_name,
             start_minimized: self.start_minimized,
             start_with_windows: self.start_with_windows,
-            selected_temp_units: self.selected_temp_units,
+            selected_temp_units: self.selected_temp_units.expect("Temp unit must be selected"),
+            data_update_interval: self.data_update_interval,
             temp_low_threshold: self.temp_low_threshold,
             temp_high_threshold: self.temp_high_threshold,
         };
@@ -102,8 +117,6 @@ impl Settings {
         dbg!("Saved config to disk");
         Ok(())
     }
-    
-    
 }
 
 impl Default for Settings {
@@ -112,11 +125,13 @@ impl Default for Settings {
             theme: Theme::Dracula,
             start_with_windows: true,
             start_minimized: false,
-            selected_temp_units: TempUnits::Celsius,
+            selected_temp_units: Option::from(TempUnits::Celsius),
+            data_update_interval: 2.0,
             temp_low_threshold: 40.0,
             temp_high_threshold: 70.0,
             temp_low_input: "40".to_string(),
             temp_high_input: "70".to_string(),
+            update_interval_input: "2.0".to_string(),
         }
     }
 }

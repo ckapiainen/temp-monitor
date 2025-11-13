@@ -99,6 +99,7 @@ enum Message {
     TempUnitSelected(model::config::TempUnits),
     TempLowThresholdChanged(String),
     TempHighThresholdChanged(String),
+    UpdateIntervalChanged(f32),
     SaveSettings,
     MainButtonPressed,
     PlotterButtonPressed,
@@ -280,7 +281,7 @@ impl App {
                 Task::none()
             }
             Message::TempUnitSelected(unit) => {
-                self.settings.selected_temp_units = unit;
+                self.settings.selected_temp_units = Option::from(unit);
                 Task::none()
             }
             Message::TempLowThresholdChanged(value) => {
@@ -289,6 +290,11 @@ impl App {
             }
             Message::TempHighThresholdChanged(value) => {
                 self.settings.temp_high_input = value;
+                Task::none()
+            }
+            Message::UpdateIntervalChanged(value) => {
+                self.settings.data_update_interval = value;
+                self.settings.update_interval_input = value.to_string();
                 Task::none()
             }
             Message::SaveSettings => {
@@ -374,7 +380,8 @@ impl App {
         // https://docs.iced.rs/iced/#passive-subscriptions
         Subscription::batch(vec![
             window::close_events().map(Message::WindowClosed),
-            iced::time::every(Duration::from_secs(1)).map(|_| Message::UpdateHardwareData),
+            iced::time::every(Duration::from_secs_f32(self.settings.data_update_interval))
+                .map(|_| Message::UpdateHardwareData),
             tray_events_subscription(),
             self.main_window.subscription().map(Message::MainWindow),
         ])
