@@ -281,6 +281,20 @@ impl App {
                 Task::none()
             }
             Message::TempUnitSelected(unit) => {
+                // When user changes temperature unit, convert all threshold values
+                if let Some(old_unit) = self.settings.selected_temp_units {
+                    self.settings.temp_low_threshold =
+                        old_unit.convert(self.settings.temp_low_threshold, unit);
+                    self.settings.temp_high_threshold =
+                        old_unit.convert(self.settings.temp_high_threshold, unit);
+
+                    // Update the input fields to show the converted values
+                    self.settings.temp_low_input =
+                        format!("{:.0}", self.settings.temp_low_threshold);
+                    self.settings.temp_high_input =
+                        format!("{:.0}", self.settings.temp_high_threshold);
+                }
+
                 self.settings.selected_temp_units = Option::from(unit);
                 Task::none()
             }
@@ -302,6 +316,7 @@ impl App {
                 if let Ok(low) = self.settings.temp_low_input.parse::<f32>() {
                     if let Ok(high) = self.settings.temp_high_input.parse::<f32>() {
                         if low < high {
+                            // Store thresholds in the selected unit (no conversion)
                             self.settings.temp_low_threshold = low;
                             self.settings.temp_high_threshold = high;
                             self.current_theme = self.settings.theme.clone();

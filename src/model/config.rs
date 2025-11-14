@@ -44,6 +44,19 @@ impl fmt::Display for TempUnits {
     }
 }
 
+impl TempUnits {
+    pub fn convert(&self, value: f32, to_unit: TempUnits) -> f32 {
+        if self == &to_unit {
+            return value; // No conversion needed
+        }
+        match (self, to_unit) {
+            (TempUnits::Celsius, TempUnits::Fahrenheit) => value * 9.0 / 5.0 + 32.0,
+            (TempUnits::Fahrenheit, TempUnits::Celsius) => (value - 32.0) * 5.0 / 9.0,
+            _ => value,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Message {
     ToggleStartWithWindows,
@@ -78,16 +91,18 @@ impl Settings {
         };
 
         dbg!("Loaded config from disk");
+
+        // Thresholds are stored in the selected unit, use them as-is for display
         Ok(Self {
             theme,
             start_minimized: config.start_minimized,
             start_with_windows: config.start_with_windows,
-            selected_temp_units: Option::from(config.selected_temp_units),
+            selected_temp_units: Some(config.selected_temp_units),
             data_update_interval: config.data_update_interval,
             temp_low_threshold: config.temp_low_threshold,
             temp_high_threshold: config.temp_high_threshold,
-            temp_low_input: config.temp_low_threshold.to_string(),
-            temp_high_input: config.temp_high_threshold.to_string(),
+            temp_low_input: format!("{:.0}", config.temp_low_threshold),
+            temp_high_input: format!("{:.0}", config.temp_high_threshold),
             update_interval_input: config.data_update_interval.to_string(),
         })
     }
@@ -105,7 +120,9 @@ impl Settings {
             theme: theme_name,
             start_minimized: self.start_minimized,
             start_with_windows: self.start_with_windows,
-            selected_temp_units: self.selected_temp_units.expect("Temp unit must be selected"),
+            selected_temp_units: self
+                .selected_temp_units
+                .expect("Temp unit must be selected"),
             data_update_interval: self.data_update_interval,
             temp_low_threshold: self.temp_low_threshold,
             temp_high_threshold: self.temp_high_threshold,
@@ -125,7 +142,7 @@ impl Default for Settings {
             theme: Theme::Dracula,
             start_with_windows: true,
             start_minimized: false,
-            selected_temp_units: Option::from(TempUnits::Celsius),
+            selected_temp_units: Some(TempUnits::Celsius),
             data_update_interval: 2.0,
             temp_low_threshold: 40.0,
             temp_high_threshold: 70.0,

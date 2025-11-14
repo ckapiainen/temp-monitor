@@ -77,11 +77,9 @@ pub fn settings_view<'a>(
 
     // ========== APPEARANCE SECTION ==========
     let appearance_section = column![
-        text("APPEARANCE")
-            .size(14)
-            .style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.6, 0.6, 0.6))
-            }),
+        text("APPEARANCE").size(14).style(|_theme| text::Style {
+            color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+        }),
         text("Theme").size(15).style(|_theme| text::Style {
             color: Some(Color::from_rgb(0.9, 0.9, 0.9))
         }),
@@ -97,17 +95,19 @@ pub fn settings_view<'a>(
 
     // ========== BEHAVIOR SECTION ==========
     let behavior_section = column![
-        text("BEHAVIOR")
-            .size(14)
-            .style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.6, 0.6, 0.6))
-            }),
-        checkbox("Start with Windows", settings.start_with_windows),
-        checkbox("Start minimized to tray", settings.start_minimized),
+        text("BEHAVIOR").size(14).style(|_theme| text::Style {
+            color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+        }),
+        checkbox("Start with Windows", settings.start_with_windows)
+            .on_toggle(Message::ToggleStartWithWindows),
+        checkbox("Start minimized to tray", settings.start_minimized)
+            .on_toggle(Message::ToggleStartMinimized),
         column![
-            text("Update Interval").size(15).style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.9, 0.9, 0.9))
-            }),
+            text("Update Interval")
+                .size(15)
+                .style(|_theme| text::Style {
+                    color: Some(Color::from_rgb(0.9, 0.9, 0.9))
+                }),
             row![
                 slider(
                     0.5..=10.0,
@@ -139,12 +139,15 @@ pub fn settings_view<'a>(
     .spacing(8);
 
     // ========== TEMPERATURE SECTION ==========
+    let unit = settings.selected_temp_units.map(|u| match u {
+        model::config::TempUnits::Celsius => "°C",
+        model::config::TempUnits::Fahrenheit => "°F",
+    });
+
     let temp_section = column![
-        text("TEMPERATURE")
-            .size(14)
-            .style(|_theme| text::Style {
-                color: Some(Color::from_rgb(0.6, 0.6, 0.6))
-            }),
+        text("TEMPERATURE").size(14).style(|_theme| text::Style {
+            color: Some(Color::from_rgb(0.6, 0.6, 0.6))
+        }),
         column![
             text("Units").size(15).style(|_theme| text::Style {
                 color: Some(Color::from_rgb(0.9, 0.9, 0.9))
@@ -167,7 +170,7 @@ pub fn settings_view<'a>(
             }),
             row![
                 column![
-                    text("Low (°C)")
+                    text(format!("Low ({})", unit.unwrap_or("°C")))
                         .size(14)
                         .style(|_theme| text::Style {
                             color: Some(Color::from_rgb(0.7, 0.7, 0.7))
@@ -179,7 +182,7 @@ pub fn settings_view<'a>(
                 ]
                 .spacing(5),
                 column![
-                    text("High (°C)")
+                    text(format!("High ({})", unit.unwrap_or("°C")))
                         .size(14)
                         .style(|_theme| text::Style {
                             color: Some(Color::from_rgb(0.7, 0.7, 0.7))
@@ -220,40 +223,46 @@ pub fn settings_view<'a>(
 
     // Combine all sections
     let separator_color = Color::from_rgb(0.3, 0.3, 0.3);
+
+    let scrollbar_config = scrollable::Scrollbar::new().scroller_width(4);
     let content = column![
         header,
         rule::horizontal(1),
-        container(scrollable(
-            container(
-                column![
-                    appearance_section,
-                    rule::horizontal(1).style(move |_theme| rule::Style {
-                        color: separator_color,
-                        snap: false,
-                        fill_mode: rule::FillMode::Full,
-                        radius: 0.0.into(),
-                    }),
-                    behavior_section,
-                    rule::horizontal(1).style(move |_theme| rule::Style {
-                        color: separator_color,
-                        snap: false,
-                        fill_mode: rule::FillMode::Full,
-                        radius: 0.0.into(),
-                    }),
-                    temp_section,
-                    rule::horizontal(1).style(move |_theme| rule::Style {
-                        color: separator_color,
-                        snap: false,
-                        fill_mode: rule::FillMode::Full,
-                        radius: 0.0.into(),
-                    }),
-                    save_button,
-                ]
-                .spacing(20)
+        container(
+            scrollable(
+                container(
+                    column![
+                        appearance_section,
+                        rule::horizontal(1).style(move |_theme| rule::Style {
+                            color: separator_color,
+                            snap: false,
+                            fill_mode: rule::FillMode::Full,
+                            radius: 0.0.into(),
+                        }),
+                        behavior_section,
+                        rule::horizontal(1).style(move |_theme| rule::Style {
+                            color: separator_color,
+                            snap: false,
+                            fill_mode: rule::FillMode::Full,
+                            radius: 0.0.into(),
+                        }),
+                        temp_section,
+                        rule::horizontal(1).style(move |_theme| rule::Style {
+                            color: separator_color,
+                            snap: false,
+                            fill_mode: rule::FillMode::Full,
+                            radius: 0.0.into(),
+                        }),
+                        save_button,
+                    ]
+                    .spacing(10)
+                )
+                .padding(20)
+                .width(Length::Fill),
             )
-            .padding([20, 0])
-            .width(Length::Fill),
-        ))
+            .direction(scrollable::Direction::Vertical(scrollbar_config))
+            .style(styles::thin_scrollbar_style)
+        )
         .padding(20)
         .width(Length::Fill)
         .height(Length::Fill),

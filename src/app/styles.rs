@@ -1,5 +1,5 @@
-use iced::widget::{button, container};
-use iced::{Background, Theme};
+use iced::widget::{button, container, scrollable};
+use iced::{Background, Color, Theme};
 
 /// Styling for components, currently only dark theme is supported
 pub fn rounded_button_style(_theme: &Theme, status: button::Status) -> button::Style {
@@ -233,5 +233,36 @@ pub fn modal_generic(_theme: &Theme) -> container::Style {
         },
         text_color: None,
         snap: false,
+    }
+}
+
+pub fn thin_scrollbar_style(_theme: &Theme, _status: scrollable::Status) -> scrollable::Style {
+    scrollable::Style {
+        container: container::Style::default(),
+        vertical_rail: scrollable::Rail {
+            background: Some(Background::Color(Color::TRANSPARENT)),
+            border: iced::Border::default(),
+            scroller: scrollable::Scroller {
+                color: Color::from_rgba(0.5, 0.5, 0.5, 0.3),
+                border: iced::Border {
+                    color: Color::TRANSPARENT,
+                    width: 0.0,
+                    radius: iced::border::Radius::from(2.0),
+                },
+            },
+        },
+        horizontal_rail: scrollable::Rail {
+            background: Some(Background::Color(Color::TRANSPARENT)),
+            border: iced::Border::default(),
+            scroller: scrollable::Scroller {
+                color: Color::from_rgba(0.5, 0.5, 0.5, 0.3),
+                border: iced::Border {
+                    color: Color::TRANSPARENT,
+                    width: 0.0,
+                    radius: iced::border::Radius::from(2.0),
+                },
+            },
+        },
+        gap: None,
     }
 }
