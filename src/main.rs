@@ -1,18 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide terminal on Windows
 mod app;
 mod collectors;
-mod model;
 
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
 use crate::collectors::CoreStats;
+use app::settings::Settings;
 use app::{layout, main_window, modal};
 use colored::Colorize;
 use iced::widget::container;
 use iced::{window, Element, Subscription, Task, Theme};
 use lhm_client::service::is_service_installed;
 use lhm_client::{ComputerOptions, LHMClient};
-use model::config::Settings;
 use std::time::Duration;
 use sysinfo::System;
 use tray_icon::{
@@ -96,7 +95,7 @@ enum Message {
     ThemeChanged(Theme),
     ToggleStartWithWindows(bool),
     ToggleStartMinimized(bool),
-    TempUnitSelected(model::config::TempUnits),
+    TempUnitSelected(app::settings::TempUnits),
     TempLowThresholdChanged(String),
     TempHighThresholdChanged(String),
     UpdateIntervalChanged(f32),
@@ -385,7 +384,7 @@ impl App {
             Screen::Settings => container("").into(),
         };
         if self.show_settings_modal {
-            modal::settings_view(layout::with_header(page), &self.settings)
+            self.settings.view(layout::with_header(page))
         } else {
             layout::with_header(page)
         }
