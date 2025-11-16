@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide terminal on Windows
 mod app;
 mod collectors;
+mod utils;
 
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
@@ -111,7 +112,6 @@ enum Message {
 enum Screen {
     Main,
     Plotter,
-    Settings,
 }
 
 struct App {
@@ -381,7 +381,6 @@ impl App {
                 .view(&self.cpu_data)
                 .map(Message::MainWindow),
             Screen::Plotter => container("").into(),
-            Screen::Settings => container("").into(),
         };
         if self.show_settings_modal {
             self.settings.view(layout::with_header(page))
