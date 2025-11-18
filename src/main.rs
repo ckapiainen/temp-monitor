@@ -6,6 +6,7 @@ mod utils;
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
 use crate::collectors::CoreStats;
+use crate::utils::csv_logger::{CsvCpuLogEntry, CsvLogger};
 use app::settings::Settings;
 use app::{layout, main_window, modal};
 use colored::Colorize;
@@ -127,16 +128,23 @@ struct App {
     tray_icon: tray_icon::TrayIcon,
     show_menu_id: MenuId,
     quit_menu_id: MenuId,
+    csv_logger: CsvLogger,
+    last_error: Option<String>,
 }
 
 impl App {
     /// Update tray tooltip with live hw data
     // Temperature thresholds for icon color changes are configurable in settings
     fn update_tray_tooltip(&self) {
-        let tooltip = format!(
+        let mut tooltip = format!(
             "CPU: {:.0}°C ({:.0}%)\nPower: {:.1}W",
             self.cpu_data.temp, self.cpu_data.usage, self.cpu_data.total_power_draw
         );
+
+        // Append error message if present
+        if let Some(error) = &self.last_error {
+            tooltip.push_str(&format!("\n⚠ Error: {}", error));
+        }
 
         if let Err(e) = self.tray_icon.set_tooltip(Some(&tooltip)) {
             eprintln!("Failed to update tray tooltip: {}", e);
@@ -192,6 +200,7 @@ impl App {
         let hw_monitor_service = None;
         let settings = Settings::load().expect("Error loading settings");
         let current_theme = settings.theme.clone();
+        let csv_logger = CsvLogger::new(None).expect("Failed to create CSV logger");
 
         // Create task to connect to hardware monitor
         let connect_task = Task::future(async {
@@ -212,6 +221,8 @@ impl App {
                 tray_icon,
                 show_menu_id: show_id,
                 quit_menu_id: quit_id,
+                csv_logger,
+                last_error: None,
             },
             Task::batch(vec![
                 // Batch tasks to run in parallel
@@ -244,6 +255,12 @@ impl App {
             Message::WindowClosed(_id) => {
                 dbg!("Window closed, daemon still running...");
                 self.window_id = None;
+
+                // Flush any pending CSV logs
+                if let Err(e) = self.csv_logger.flush_buffer() {
+                    eprintln!("Failed to flush CSV on window close: {}", e);
+                }
+
                 Task::none()
             }
             Message::TrayEvent(menu_id) => {
@@ -262,6 +279,10 @@ impl App {
                     }
                     Task::none()
                 } else if menu_id == self.quit_menu_id {
+                    // Flush CSV buffer before quitting
+                    if let Err(e) = self.csv_logger.flush_buffer() {
+                        eprintln!("Failed to flush CSV on quit: {}", e);
+                    }
                     std::process::exit(0);
                 } else {
                     Task::none()
@@ -365,6 +386,32 @@ impl App {
                 self.cpu_data.update_lhm_data(temps);
                 // Update tray tooltip with fresh hardware data
                 self.update_tray_tooltip();
+
+                // Log CPU data to CSV
+                let entry = CsvCpuLogEntry {
+                    timestamp: chrono::Local::now().to_rfc3339(),
+                    temperature_unit: self
+                        .settings
+                        .selected_temp_units
+                        .as_ref()
+                        .map(|u| u.to_string())
+                        .unwrap_or_else(|| "C".to_string()),
+                    temperature: self.cpu_data.temp,
+                    cpu_usage: self.cpu_data.usage,
+                    power_draw: self.cpu_data.total_power_draw,
+                };
+
+                match self.csv_logger.write(vec![entry]) {
+                    Ok(_) => {
+                        // Clear error on successful write
+                        self.last_error = None;
+                    }
+                    Err(e) => {
+                        let error_msg = format!("CSV write failed: {}", e);
+                        eprintln!("{}", error_msg);
+                        self.last_error = Some(error_msg);
+                    }
+                }
 
                 Task::none()
             }

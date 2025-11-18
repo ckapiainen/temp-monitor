@@ -35,7 +35,7 @@ impl CsvLogger {
             wtr,
             path,
             timestamp: Local::now(),
-            write_buffer_size: 50,
+            write_buffer_size: 1,
             write_buffer: vec![],
             graph_data: vec![],
         })
@@ -92,6 +92,22 @@ impl CsvLogger {
     }
 
     pub fn flush_buffer(&mut self) -> Result<(), Error> {
+        // Check if file still exists, recreate if deleted
+        if !self.path.exists() {
+            eprintln!("CSV file was deleted, recreating: {:?}", self.path);
+            // Ensure parent directory exists
+            if let Some(parent) = self.path.parent() {
+                fs::create_dir_all(parent).map_err(|e| {
+                    Error::from(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Failed to create directory: {}", e),
+                    ))
+                })?;
+            }
+            // Recreate the writer with the same path
+            self.wtr = WriterBuilder::new().delimiter(b';').from_path(&self.path)?;
+        }
+
         for entry in &self.write_buffer {
             self.wtr.serialize(entry)?;
         }
