@@ -3,8 +3,9 @@ use chrono::prelude::*;
 use csv::{Error, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CsvCpuLogEntry {
@@ -19,9 +20,10 @@ pub struct CsvLogger {
     wtr: Writer<File>,
     pub path: PathBuf,
     pub timestamp: DateTime<Local>,
+    pub runtime_start: SystemTime,
     write_buffer_size: usize,
     pub write_buffer: Vec<CsvCpuLogEntry>,
-    pub graph_data: Vec<CsvCpuLogEntry>, // TODO: For upcoming line graph. THIS IS HERE FOR NOW
+    pub graph_data_buffer: Vec<CsvCpuLogEntry>, // TODO: For upcoming line graph. THIS IS HERE FOR NOW
 }
 
 impl CsvLogger {
@@ -30,23 +32,23 @@ impl CsvLogger {
         fs::create_dir_all(dir)?;
         let date_str = Local::now().format("%d-%m-%Y").to_string();
         let path = PathBuf::from(format!("{}/{}_cpu_logs.csv", dir, date_str));
-        let wtr = WriterBuilder::new().delimiter(b';').from_path(&path)?;
+
+        let wtr = Self::open_csv_writer(&path)?;
+
         Ok(Self {
             wtr,
             path,
             timestamp: Local::now(),
-            write_buffer_size: 1,
+            runtime_start: SystemTime::now(),
+            write_buffer_size: 1, // TODO: Change back to 50 in prod. Make it configurable?
             write_buffer: vec![],
-            graph_data: vec![],
+            graph_data_buffer: vec![],
         })
     }
 
     pub fn update_path(&mut self, new_path: PathBuf) {
         self.path = new_path;
-        self.wtr = WriterBuilder::new()
-            .delimiter(b';')
-            .from_path(&self.path)
-            .unwrap();
+        self.wtr = Self::open_csv_writer(&self.path).unwrap();
     }
     pub fn read(&self) -> Result<Vec<CsvCpuLogEntry>> {
         let mut rdr = csv::ReaderBuilder::new()
@@ -72,13 +74,14 @@ impl CsvLogger {
             self.timestamp = today;
             let new_filename = format!("logs/{}_cpu_logs.csv", date_str);
             self.path = PathBuf::from(&new_filename);
-            self.wtr = WriterBuilder::new().delimiter(b';').from_path(&self.path)?;
+            self.wtr = Self::open_csv_writer(&self.path)?;
         }
 
         // Add to graph data (last 1000 for now)
-        self.graph_data.append(&mut entries.clone());
-        if self.graph_data.len() > 1000 {
-            self.graph_data.drain(0..self.graph_data.len() - 1000);
+        self.graph_data_buffer.append(&mut entries.clone());
+        if self.graph_data_buffer.len() > 1000 {
+            self.graph_data_buffer
+                .drain(0..self.graph_data_buffer.len() - 1000);
         }
 
         // Add to write buffer
@@ -104,8 +107,9 @@ impl CsvLogger {
                     ))
                 })?;
             }
-            // Recreate the writer with the same path
-            self.wtr = WriterBuilder::new().delimiter(b';').from_path(&self.path)?;
+
+            // Recreate the writer in append mode with headers
+            self.wtr = Self::open_csv_writer(&self.path)?;
         }
 
         for entry in &self.write_buffer {
@@ -116,7 +120,29 @@ impl CsvLogger {
         Ok(())
     }
 
-    pub fn get_graph_data(&self) -> &[CsvCpuLogEntry] {
-        &self.graph_data
+    // Helper function to open CSV writer in append mode with header check
+    fn open_csv_writer(path: &PathBuf) -> Result<Writer<File>, Error> {
+        let file_exists = path.exists();
+
+        let file = OpenOptions::new().create(true).append(true).open(path)?;
+
+        let mut wtr = WriterBuilder::new()
+            .delimiter(b';')
+            .has_headers(!file_exists)
+            .from_writer(file);
+
+        // Write headers if new file
+        if !file_exists {
+            wtr.write_record(&[
+                "timestamp",
+                "temperature_unit",
+                "temperature",
+                "cpu_usage",
+                "power_draw",
+            ])?;
+            wtr.flush()?;
+        }
+
+        Ok(wtr)
     }
 }

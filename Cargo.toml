@@ -1,13 +1,14 @@
 [package]
 name = "temp-monitor"
-version = "0.6.0"
+version = "0.7.0"
 repository = "https://github.com/ckapiainen/temp-monitor"
 authors = ["ckapiainen"]
 edition = "2021"
 build = "build.rs"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "image", "svg"] }
+iced = { git = "https://github.com/iced-rs/iced", features = ["tokio", "wgpu", "image", "svg", "canvas"] }
+iced_plot = { git = "https://github.com/donkeyteethUX/iced_plot" }
 anyhow = "1.0.100"
 tokio = { version = "=1.45.1", features = ["rt", "time", "fs", "macros"] }
 colored = "3.0.0"
