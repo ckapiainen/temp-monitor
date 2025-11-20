@@ -1,6 +1,6 @@
 use crate::app::modal::modal;
 use crate::app::styles;
-use crate::Message;
+use crate::AppMessage;
 use anyhow::{Context, Result};
 use iced::widget::{
     button, checkbox, column, container, pick_list, row, rule, scrollable, slider, text, text_input,
@@ -153,7 +153,7 @@ impl Settings {
         Ok(())
     }
 
-    pub fn view<'a>(&'a self, base: Element<'a, Message>) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, base: Element<'a, AppMessage>) -> Element<'a, AppMessage> {
         // Header with title and close button
         let header = container(
             row![
@@ -164,7 +164,7 @@ impl Settings {
                         color: Some(Color::from_rgb(0.9, 0.9, 0.9))
                     }),
                 button(text("✕").size(20))
-                    .on_press(Message::HideSettingsModal)
+                    .on_press(AppMessage::HideSettingsModal)
                     .padding([4, 10])
                     .style(styles::header_button_style),
             ]
@@ -185,7 +185,7 @@ impl Settings {
             pick_list(
                 [Theme::Dracula, Theme::Ferra, Theme::Dark, Theme::Nord],
                 Some(&self.theme),
-                Message::ThemeChanged,
+                AppMessage::ThemeChanged,
             )
             .width(Length::Fill)
             .padding(10),
@@ -198,9 +198,9 @@ impl Settings {
                 color: Some(Color::from_rgb(0.6, 0.6, 0.6))
             }),
             checkbox("Start with Windows", self.start_with_windows)
-                .on_toggle(Message::ToggleStartWithWindows),
+                .on_toggle(AppMessage::ToggleStartWithWindows),
             checkbox("Start minimized to tray", self.start_minimized)
-                .on_toggle(Message::ToggleStartMinimized),
+                .on_toggle(AppMessage::ToggleStartMinimized),
             column![
                 text("Update Interval")
                     .size(15)
@@ -211,7 +211,7 @@ impl Settings {
                     slider(
                         0.5..=10.0,
                         self.data_update_interval,
-                        Message::UpdateIntervalChanged
+                        AppMessage::UpdateIntervalChanged
                     )
                     .step(0.5)
                     .width(Length::Fill),
@@ -254,7 +254,7 @@ impl Settings {
                 pick_list(
                     [TempUnits::Celsius, TempUnits::Fahrenheit,],
                     self.selected_temp_units,
-                    Message::TempUnitSelected,
+                    AppMessage::TempUnitSelected,
                 )
                 .width(140)
                 .padding(10),
@@ -272,7 +272,7 @@ impl Settings {
                                 color: Some(Color::from_rgb(0.7, 0.7, 0.7))
                             }),
                         text_input("60", &self.temp_low_input)
-                            .on_input(Message::TempLowThresholdChanged)
+                            .on_input(AppMessage::TempLowThresholdChanged)
                             .padding(10)
                             .width(Length::Fixed(80.0)),
                     ]
@@ -284,7 +284,7 @@ impl Settings {
                                 color: Some(Color::from_rgb(0.7, 0.7, 0.7))
                             }),
                         text_input("80", &self.temp_high_input)
-                            .on_input(Message::TempHighThresholdChanged)
+                            .on_input(AppMessage::TempHighThresholdChanged)
                             .padding(10)
                             .width(Length::Fixed(80.0)),
                     ]
@@ -312,7 +312,7 @@ impl Settings {
                 .width(Length::Fill)
                 .align_x(iced::alignment::Horizontal::Center),
         )
-        .on_press(crate::Message::SaveSettings)
+        .on_press(crate::AppMessage::SaveSettings)
         .padding(12)
         .width(Length::Fill)
         .style(styles::rounded_button_style);
@@ -375,7 +375,7 @@ impl Settings {
         modal(
             base,
             modal_content,
-            crate::Message::HideSettingsModal,
+            crate::AppMessage::HideSettingsModal,
             false,
         )
     }
