@@ -109,6 +109,7 @@ enum AppMessage {
     UpdateHardwareData,
     CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
     MainWindow(main_window::MainWindowMessage),
+    PlotWindow(iced_plot::PlotUiMessage),
     HardwareMonitorConnected(Option<lhm_client::LHMClientHandle>),
 }
 #[derive(Clone, Debug)]
@@ -374,6 +375,10 @@ impl App {
                 self.main_window.update(msg);
                 Task::none()
             }
+            AppMessage::PlotWindow(msg) => {
+                self.plot_window.update(msg);
+                Task::none()
+            }
             AppMessage::UpdateHardwareData => {
                 self.cpu_data.update(&mut self.system);
 
@@ -435,7 +440,7 @@ impl App {
                 .main_window
                 .view(&self.cpu_data)
                 .map(AppMessage::MainWindow),
-            Screen::Plotter => self.plot_window.view(&self.csv_logger),
+            Screen::Plotter => self.plot_window.view().map(AppMessage::PlotWindow),
         };
         if self.show_settings_modal {
             self.settings.view(layout::with_header(page))

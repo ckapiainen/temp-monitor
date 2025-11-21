@@ -1,58 +1,35 @@
-use crate::chart::{Chart, ChartConfig, ChartSeries};
-use crate::utils::csv_logger::CsvLogger;
-use iced::{Color, Element};
-use iced::widget::{column, container, Space};
+use iced::Element;
+use iced_plot::{PlotUiMessage, PlotWidget, PlotWidgetBuilder, Series};
 
 pub struct PlotWindow {
-    line_chart: Chart,
+    plot: PlotWidget,
 }
 
 impl PlotWindow {
     pub fn new() -> Self {
-        let config = ChartConfig {
-            x_label: "Time".to_string(),
-            y_label: "Temperature".to_string(),
-            x_unit: " s".to_string(),
-            y_unit: " °C".to_string(),
-            show_grid: true,
-            show_legend: true,
-            grid_color: Color::from_rgba(0.5, 0.5, 0.5, 0.2),
-            axis_color: Color::from_rgb(0.5, 0.5, 0.5),
-            text_color: Color::from_rgb(0.9, 0.9, 0.9),
-            background_color: Color::from_rgba(0.1, 0.1, 0.1, 0.5),
-            margin_top: 5.0,
-            margin_bottom: 85.0,
-            margin_left: 65.0,
-            margin_right: 120.0,
-            x_min: None,
-            x_max: None,
-            y_min: Some(20.0),
-            y_max: Some(90.0),
-        };
+        // Create a minimal initial series to prevent empty buffer panics
+        // Remove this series later when you add real data
+        let dummy_series = Series::circles(vec![[0.0, 0.0]], 3.0).with_label("waiting for data");
 
-        let mut cpu_series =
-            ChartSeries::new("CPU", Color::from_rgb(1.0, 0.5, 0.0)).with_line_width(2.5);
-
-        //  points for testing
-        for i in 0..10 {
-            let t = i as f64 * 0.5;
-            let temp = 45.0 + (t * 0.3).sin() * 10.0;
-            cpu_series.add_point(t, temp);
+        Self {
+            plot: PlotWidgetBuilder::new()
+                .with_autoscale_on_updates(true)
+                .with_y_label("Temperature (°C)")
+                .with_x_label("Time (s)")
+                .with_tooltips(true)
+                .with_x_lim(0.0, 60.0)
+                .with_y_lim(0.0, 100.0)
+                .add_series(dummy_series)
+                .build()
+                .unwrap(),
         }
-
-        let mut chart = Chart::with_config(config);
-        chart.add_series(cpu_series);
-        Self { line_chart: chart }
     }
-    pub fn view<'a, Message: 'a + Clone>(
-        &'a self,
-        _csv_logger: &CsvLogger,
-    ) -> Element<'a, Message> {
-        let content = column![self.line_chart.view(), Space::new()];
 
-        container(content)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .into()
+    pub fn update(&mut self, message: PlotUiMessage) {
+        self.plot.update(message);
+    }
+
+    pub fn view(&self) -> Element<'_, PlotUiMessage> {
+        self.plot.view()
     }
 }
