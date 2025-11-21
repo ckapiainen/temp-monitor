@@ -2,6 +2,7 @@
 mod app;
 mod collectors;
 mod utils;
+mod chart;
 
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
@@ -20,6 +21,7 @@ use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder,
 };
+use crate::app::plot_window;
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -88,7 +90,7 @@ fn main() -> iced::Result {
 }
 
 #[derive(Clone)]
-enum Message {
+enum AppMessage {
     WindowOpened(window::Id),
     WindowClosed(window::Id),
     TrayEvent(MenuId),
@@ -106,7 +108,7 @@ enum Message {
     PlotterButtonPressed,
     UpdateHardwareData,
     CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
-    MainWindow(main_window::Message),
+    MainWindow(main_window::MainWindowMessage),
     HardwareMonitorConnected(Option<lhm_client::LHMClientHandle>),
 }
 #[derive(Clone, Debug)]
@@ -125,6 +127,7 @@ struct App {
     current_theme: Theme,
     settings: Settings,
     main_window: main_window::MainWindow,
+    plot_window: plot_window::PlotWindow,
     tray_icon: tray_icon::TrayIcon,
     show_menu_id: MenuId,
     quit_menu_id: MenuId,
@@ -151,7 +154,7 @@ impl App {
         }
     }
 
-    fn new() -> (Self, Task<Message>) {
+    fn new() -> (Self, Task<AppMessage>) {
         let window_settings = window::Settings {
             size: iced::Size::new(800.0, 700.0),
             position: window::Position::Centered,
@@ -204,7 +207,7 @@ impl App {
 
         // Create task to connect to hardware monitor
         let connect_task = Task::future(async {
-            Message::HardwareMonitorConnected(connect_to_lhwm_service().await)
+            AppMessage::HardwareMonitorConnected(connect_to_lhwm_service().await)
         });
 
         (
@@ -218,6 +221,7 @@ impl App {
                 current_theme,
                 settings,
                 main_window: main_window::MainWindow::new(),
+                plot_window: plot_window::PlotWindow::new(),
                 tray_icon,
                 show_menu_id: show_id,
                 quit_menu_id: quit_id,
@@ -226,7 +230,7 @@ impl App {
             },
             Task::batch(vec![
                 // Batch tasks to run in parallel
-                open_task.map(Message::WindowOpened),
+                open_task.map(AppMessage::WindowOpened),
                 connect_task,
             ]),
         )
@@ -236,23 +240,23 @@ impl App {
         self.current_theme.clone()
     }
 
-    fn update(&mut self, message: Message) -> Task<Message> {
+    fn update(&mut self, message: AppMessage) -> Task<AppMessage> {
         match message {
-            Message::HardwareMonitorConnected(client) => {
+            AppMessage::HardwareMonitorConnected(client) => {
                 self.hw_monitor_service = client;
                 if self.hw_monitor_service.is_some() {
                     println!("{}", "✓ Connected to hardware monitor".green());
                     // Trigger initial update after service connects
-                    Task::done(Message::UpdateHardwareData)
+                    Task::done(AppMessage::UpdateHardwareData)
                 } else {
                     Task::none()
                 }
             }
-            Message::WindowOpened(id) => {
+            AppMessage::WindowOpened(id) => {
                 self.window_id = Some(id);
                 Task::none()
             }
-            Message::WindowClosed(_id) => {
+            AppMessage::WindowClosed(_id) => {
                 dbg!("Window closed, daemon still running...");
                 self.window_id = None;
 
@@ -263,7 +267,7 @@ impl App {
 
                 Task::none()
             }
-            Message::TrayEvent(menu_id) => {
+            AppMessage::TrayEvent(menu_id) => {
                 if menu_id == self.show_menu_id {
                     // If window is closed, reopen it
                     if self.window_id.is_none() {
@@ -275,7 +279,7 @@ impl App {
                             ..Default::default()
                         };
                         let (_, open_task) = window::open(window_settings);
-                        return open_task.map(Message::WindowOpened);
+                        return open_task.map(AppMessage::WindowOpened);
                     }
                     Task::none()
                 } else if menu_id == self.quit_menu_id {
@@ -288,19 +292,19 @@ impl App {
                     Task::none()
                 }
             }
-            Message::ThemeChanged(theme) => {
+            AppMessage::ThemeChanged(theme) => {
                 self.settings.theme = theme.clone();
                 Task::none()
             }
-            Message::ToggleStartWithWindows(enabled) => {
+            AppMessage::ToggleStartWithWindows(enabled) => {
                 self.settings.start_with_windows = enabled;
                 Task::none()
             }
-            Message::ToggleStartMinimized(enabled) => {
+            AppMessage::ToggleStartMinimized(enabled) => {
                 self.settings.start_minimized = enabled;
                 Task::none()
             }
-            Message::TempUnitSelected(unit) => {
+            AppMessage::TempUnitSelected(unit) => {
                 // When user changes temperature unit, convert all threshold values
                 if let Some(old_unit) = self.settings.selected_temp_units {
                     self.settings.temp_low_threshold =
@@ -318,20 +322,20 @@ impl App {
                 self.settings.selected_temp_units = Option::from(unit);
                 Task::none()
             }
-            Message::TempLowThresholdChanged(value) => {
+            AppMessage::TempLowThresholdChanged(value) => {
                 self.settings.temp_low_input = value;
                 Task::none()
             }
-            Message::TempHighThresholdChanged(value) => {
+            AppMessage::TempHighThresholdChanged(value) => {
                 self.settings.temp_high_input = value;
                 Task::none()
             }
-            Message::UpdateIntervalChanged(value) => {
+            AppMessage::UpdateIntervalChanged(value) => {
                 self.settings.data_update_interval = value;
                 self.settings.update_interval_input = value.to_string();
                 Task::none()
             }
-            Message::SaveSettings => {
+            AppMessage::SaveSettings => {
                 // Parse and validate temperature thresholds
                 if let Ok(low) = self.settings.temp_low_input.parse::<f32>() {
                     if let Ok(high) = self.settings.temp_high_input.parse::<f32>() {
@@ -347,26 +351,30 @@ impl App {
                 self.show_settings_modal = false;
                 Task::none()
             }
-            Message::MainButtonPressed | Message::PlotterButtonPressed => {
-                println!("Button pressed");
+            AppMessage::MainButtonPressed => {
+                self.current_screen = Screen::Main;
                 Task::none()
             }
-            Message::ShowSettingsModal => {
+            AppMessage::PlotterButtonPressed => {
+                self.current_screen = Screen::Plotter;
+                Task::none()
+            }
+            AppMessage::ShowSettingsModal => {
                 // Reset input fields to current saved values when opening modal
                 self.settings.temp_low_input = self.settings.temp_low_threshold.to_string();
                 self.settings.temp_high_input = self.settings.temp_high_threshold.to_string();
                 self.show_settings_modal = true;
                 Task::none()
             }
-            Message::HideSettingsModal => {
+            AppMessage::HideSettingsModal => {
                 self.show_settings_modal = false;
                 Task::none()
             }
-            Message::MainWindow(msg) => {
+            AppMessage::MainWindow(msg) => {
                 self.main_window.update(msg);
                 Task::none()
             }
-            Message::UpdateHardwareData => {
+            AppMessage::UpdateHardwareData => {
                 self.cpu_data.update(&mut self.system);
 
                 if let Some(client) = &self.hw_monitor_service {
@@ -375,13 +383,13 @@ impl App {
                         // NOTE TO SELF: Task::future always needs to return message
                         client.update_all().await.expect("Error updating hardware");
                         let temps = lhm_cpu_queries(&client).await;
-                        Message::CpuValuesUpdated(temps)
+                        AppMessage::CpuValuesUpdated(temps)
                     })
                 } else {
                     Task::none()
                 }
             }
-            Message::CpuValuesUpdated(temps) => {
+            AppMessage::CpuValuesUpdated(temps) => {
                 // Collect everything from lhm queries into CpuData
                 self.cpu_data.update_lhm_data(temps);
                 // Update tray tooltip with fresh hardware data
@@ -418,7 +426,7 @@ impl App {
         }
     }
 
-    fn view(&self, window_id: window::Id) -> Element<'_, Message> {
+    fn view(&self, window_id: window::Id) -> Element<'_, AppMessage> {
         if self.window_id != Some(window_id) {
             return container("").into();
         }
@@ -426,8 +434,8 @@ impl App {
             Screen::Main => self
                 .main_window
                 .view(&self.cpu_data)
-                .map(Message::MainWindow),
-            Screen::Plotter => container("").into(),
+                .map(AppMessage::MainWindow),
+            Screen::Plotter => self.plot_window.view(&self.csv_logger),
         };
         if self.show_settings_modal {
             self.settings.view(layout::with_header(page))
@@ -436,32 +444,32 @@ impl App {
         }
     }
 
-    fn subscription(&self) -> Subscription<Message> {
+    fn subscription(&self) -> Subscription<AppMessage> {
         // https://docs.iced.rs/iced/#passive-subscriptions
         Subscription::batch(vec![
-            window::close_events().map(Message::WindowClosed),
+            window::close_events().map(AppMessage::WindowClosed),
             iced::time::every(Duration::from_secs_f32(self.settings.data_update_interval))
-                .map(|_| Message::UpdateHardwareData),
+                .map(|_| AppMessage::UpdateHardwareData),
             tray_events_subscription(),
-            self.main_window.subscription().map(Message::MainWindow),
+            self.main_window.subscription().map(AppMessage::MainWindow),
         ])
     }
 }
 
 /// Subscription for tray menu events
-fn tray_events_subscription() -> Subscription<Message> {
+fn tray_events_subscription() -> Subscription<AppMessage> {
     use iced::futures::SinkExt;
 
     Subscription::run(|| {
         iced::stream::channel(
             50,
-            |mut output: iced::futures::channel::mpsc::Sender<Message>| async move {
+            |mut output: iced::futures::channel::mpsc::Sender<AppMessage>| async move {
                 loop {
                     tokio::time::sleep(Duration::from_millis(50)).await;
 
                     // Poll menu events from tray-icon
                     while let Ok(event) = MenuEvent::receiver().try_recv() {
-                        let _ = output.send(Message::TrayEvent(event.id)).await;
+                        let _ = output.send(AppMessage::TrayEvent(event.id)).await;
                     }
                 }
             },

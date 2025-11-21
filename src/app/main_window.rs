@@ -14,7 +14,7 @@ pub enum BarChartState {
 }
 
 #[derive(Debug, Clone)]
-pub enum Message {
+pub enum MainWindowMessage {
     UsageButtonPressed,
     PowerButtonPressed,
     // Animation triggers
@@ -40,15 +40,15 @@ impl MainWindow {
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: MainWindowMessage) {
         match message {
-            Message::UsageButtonPressed => {
+            MainWindowMessage::UsageButtonPressed => {
                 self.bar_chart_state = BarChartState::Usage;
             }
-            Message::PowerButtonPressed => {
+            MainWindowMessage::PowerButtonPressed => {
                 self.bar_chart_state = BarChartState::Power;
             }
-            Message::ToggleGeneralInfo => {
+            MainWindowMessage::ToggleGeneralInfo => {
                 // 0.0 Collapsed, 1.0 Expanded
                 let new_value = if self.general_info_expanded.value > 0.5 {
                     0.0
@@ -59,7 +59,7 @@ impl MainWindow {
                 self.general_info_expanded
                     .transition(new_value, Instant::now());
             }
-            Message::ToggleCoresCard => {
+            MainWindowMessage::ToggleCoresCard => {
                 let new_value = if self.cores_card_expanded.value > 0.5 {
                     0.0
                 } else {
@@ -68,25 +68,25 @@ impl MainWindow {
                 self.cores_card_expanded
                     .transition(new_value, Instant::now());
             }
-            Message::Tick => {
+            MainWindowMessage::Tick => {
                 // Update current time on each frame
                 self.now = Instant::now();
             }
         }
     }
 
-    pub fn subscription(&self) -> Subscription<Message> {
+    pub fn subscription(&self) -> Subscription<MainWindowMessage> {
         // Only subscribe to frames when animations are active
         if self.general_info_expanded.in_progress(self.now)
             || self.cores_card_expanded.in_progress(self.now)
         {
-            window::frames().map(|_| Message::Tick)
+            window::frames().map(|_| MainWindowMessage::Tick)
         } else {
             Subscription::none()
         }
     }
 
-    pub fn view<'a>(&self, cpu_data: &'a CpuData) -> Element<'a, Message> {
+    pub fn view<'a>(&self, cpu_data: &'a CpuData) -> Element<'a, MainWindowMessage> {
         let core_usage_vector = &cpu_data.core_utilization;
         let core_power_draw_vector = &cpu_data.core_power_draw;
 
@@ -124,7 +124,7 @@ impl MainWindow {
                 left: 10.0,
             }),
         )
-        .on_press(Message::ToggleGeneralInfo)
+        .on_press(MainWindowMessage::ToggleGeneralInfo)
         .width(Fill)
         .style(styles::header_button_style);
 
@@ -236,7 +236,7 @@ impl MainWindow {
         */
 
         // Build core row with vertical rules between cores
-        let mut usage_bar_chart: Vec<Element<Message>> = Vec::new();
+        let mut usage_bar_chart: Vec<Element<MainWindowMessage>> = Vec::new();
         for (i, core) in core_usage_vector.iter().enumerate() {
             let utilization = progress_bar(0.0..=100.0, core.value)
                 .vertical()
@@ -272,7 +272,7 @@ impl MainWindow {
         /*
           CORE POWER DRAW COLUMNS
         */
-        let mut power_bar_chart: Vec<Element<Message>> = Vec::new();
+        let mut power_bar_chart: Vec<Element<MainWindowMessage>> = Vec::new();
         for (i, core) in core_power_draw_vector.iter().enumerate() {
             let wattage_bar = progress_bar(0.0..=20.0, core.value)
                 .vertical()
@@ -331,7 +331,7 @@ impl MainWindow {
             .width(25)
             .height(25),
         )
-        .on_press(Message::UsageButtonPressed)
+        .on_press(MainWindowMessage::UsageButtonPressed)
         .style(styles::compact_icon_button_style);
 
         let power_button = button(
@@ -345,7 +345,7 @@ impl MainWindow {
             .width(25)
             .height(25),
         )
-        .on_press(Message::PowerButtonPressed)
+        .on_press(MainWindowMessage::PowerButtonPressed)
         .style(styles::compact_icon_button_style);
 
         // Clickable header
@@ -353,7 +353,7 @@ impl MainWindow {
             weight: font::Weight::Bold,
             ..Font::default()
         }))
-        .on_press(Message::ToggleCoresCard)
+        .on_press(MainWindowMessage::ToggleCoresCard)
         .width(Fill)
         .style(styles::header_button_style);
 

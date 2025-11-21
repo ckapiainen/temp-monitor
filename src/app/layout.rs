@@ -1,10 +1,10 @@
 use crate::app::styles;
-use crate::Message;
+use crate::AppMessage;
 use iced::widget::{button, column, container, row, svg};
 use iced::{Center, Element, Fill};
 
 /// Render the app with header
-pub fn with_header(content: Element<Message>) -> Element<Message> {
+pub fn with_header(content: Element<AppMessage>) -> Element<AppMessage> {
     let main_page_button = button(
         container(
             svg(svg::Handle::from_path("assets/icons/menu.svg"))
@@ -16,7 +16,7 @@ pub fn with_header(content: Element<Message>) -> Element<Message> {
         .width(35)
         .height(35),
     )
-    .on_press(Message::MainButtonPressed)
+    .on_press(AppMessage::MainButtonPressed)
     .style(styles::rounded_button_style);
 
     let plotter_page = button(
@@ -30,7 +30,7 @@ pub fn with_header(content: Element<Message>) -> Element<Message> {
         .width(35)
         .height(35),
     )
-    .on_press(Message::PlotterButtonPressed)
+    .on_press(AppMessage::PlotterButtonPressed)
     .style(styles::rounded_button_style);
 
     let settings_page = button(
@@ -44,7 +44,7 @@ pub fn with_header(content: Element<Message>) -> Element<Message> {
         .width(35)
         .height(35),
     )
-    .on_press(Message::ShowSettingsModal)
+    .on_press(AppMessage::ShowSettingsModal)
     .style(styles::rounded_button_style);
 
     let header = container(
