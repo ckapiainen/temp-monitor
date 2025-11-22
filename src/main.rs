@@ -1,13 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide terminal on Windows
 mod app;
+mod chart;
 mod collectors;
 mod utils;
-mod chart;
 
+use crate::app::plot_window;
 use crate::collectors::cpu_collector::CpuData;
 use crate::collectors::lhm_collector::lhm_cpu_queries;
 use crate::collectors::CoreStats;
 use crate::utils::csv_logger::{CsvCpuLogEntry, CsvLogger};
+use app::plot_window::PlotWindowMessage;
 use app::settings::Settings;
 use app::{layout, main_window, modal};
 use colored::Colorize;
@@ -21,7 +23,6 @@ use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder,
 };
-use crate::app::plot_window;
 
 async fn connect_to_lhwm_service() -> Option<lhm_client::LHMClientHandle> {
     match LHMClient::connect().await {
@@ -109,7 +110,7 @@ enum AppMessage {
     UpdateHardwareData,
     CpuValuesUpdated((f32, f32, Vec<CoreStats>)),
     MainWindow(main_window::MainWindowMessage),
-    PlotWindow(iced_plot::PlotUiMessage),
+    PlotWindow(PlotWindowMessage),
     HardwareMonitorConnected(Option<lhm_client::LHMClientHandle>),
 }
 #[derive(Clone, Debug)]
@@ -367,6 +368,7 @@ impl App {
                 self.show_settings_modal = true;
                 Task::none()
             }
+
             AppMessage::HideSettingsModal => {
                 self.show_settings_modal = false;
                 Task::none()
@@ -376,7 +378,7 @@ impl App {
                 Task::none()
             }
             AppMessage::PlotWindow(msg) => {
-                self.plot_window.update(msg);
+                self.plot_window.update(&self.csv_logger, msg);
                 Task::none()
             }
             AppMessage::UpdateHardwareData => {
@@ -425,7 +427,8 @@ impl App {
                         self.last_error = Some(error_msg);
                     }
                 }
-
+                self.plot_window
+                    .update(&self.csv_logger, PlotWindowMessage::Tick);
                 Task::none()
             }
         }
